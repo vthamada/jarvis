@@ -16,6 +16,7 @@ import json
 import re
 import ssl
 from collections.abc import Callable, Iterator
+from email.errors import MissingHeaderBodySeparatorDefect
 from math import isfinite
 from threading import Event
 from time import monotonic, time
@@ -90,6 +91,70 @@ def _strict_object(pairs: list[tuple[str, object]]) -> dict[str, object]:
 
 def _reject_constant(value: str) -> None:
     raise ValueError("non_finite_json")
+
+
+def _response_metadata_code(response: object, phase: str) -> str:
+    """Observe parsed metadata only; never raw wire, body, values or defect text.
+
+    Exact stdlib message objects are required. Unavailable synthetic seams or
+    exceptional metadata cannot change transport acceptance. The caller fences
+    every observation before computing the next one.
+    """
+    unavailable = {
+        "responses_http_version": "response_http_unavailable",
+        "responses_header_count": "response_headers_unavailable",
+        "responses_header_parse": "response_header_parse_unavailable",
+        "responses_media_presence": "response_media_presence_unavailable",
+        "responses_content_length": "response_length_unavailable",
+        "responses_transfer_encoding": "response_transfer_unavailable",
+    }[phase]
+    try:
+        if phase == "responses_http_version":
+            version = response.version
+            if type(version) is not int:
+                return unavailable
+            return {10: "response_http_1_0", 11: "response_http_1_1"}.get(
+                version, "response_http_other"
+            )
+        message = response.headers
+        if type(message) is not http.client.HTTPMessage:
+            return unavailable
+        if phase == "responses_header_count":
+            return "response_headers_present" if len(message) else "response_headers_empty"
+        if phase == "responses_header_parse":
+            defects = message.defects
+            if type(defects) is not list:
+                return unavailable
+            if not defects:
+                return "response_header_parse_clean"
+            if any(type(defect) is MissingHeaderBodySeparatorDefect for defect in defects):
+                return "response_header_parse_missing_separator"
+            return "response_header_parse_other_defect"
+        if phase == "responses_media_presence":
+            return ("response_media_present" if "Content-Type" in message
+                    else "response_media_absent")
+        length = phase == "responses_content_length"
+        prefix = "response_length" if length else "response_transfer"
+        values = message.get_all("Content-Length" if length else "Transfer-Encoding")
+        if values is None:
+            return prefix + "_absent"
+        if type(values) is not list or not values:
+            return prefix + "_invalid"
+        if len(values) != 1:
+            return prefix + "_multiple"
+        value = values[0]
+        if type(value) is not str or len(value) > 65_536:
+            return prefix + "_invalid"
+        value = value.strip()
+        if length:
+            # No integer conversion, arbitrary precision allocation or echo.
+            if not value or not value.isascii() or not value.isdecimal():
+                return "response_length_invalid"
+            return "response_length_nonzero" if value.strip("0") else "response_length_zero"
+        return ("response_transfer_chunked" if value.lower() == "chunked"
+                else "response_transfer_other")
+    except Exception:
+        return unavailable
 
 
 class PlanResponsesHttpsTransport:
@@ -313,6 +378,39 @@ class PlanResponsesHttpsTransport:
                 raise PlanTransportError(code)
             content_type = response.getheader("Content-Type", "")
             encoding = response.getheader("Content-Encoding", "identity")
+            if self._telemetry is not None:
+                # Classify only values already read for the legacy SSE guard.
+                # Never emit raw headers or change that guard's public refusal.
+                media_code = "response_media_type_invalid"
+                encoding_code = "response_encoding_invalid"
+                if type(content_type) is str:
+                    media_code = {
+                        "text/event-stream": "response_media_type_sse",
+                        "application/json": "response_media_type_json",
+                        "text/html": "response_media_type_html",
+                        "": "response_media_type_missing",
+                    }.get(content_type.split(";", 1)[0].strip().lower(),
+                          "response_media_type_other")
+                if type(encoding) is str:
+                    encoding_code = {
+                        "": "response_encoding_identity", "identity": "response_encoding_identity",
+                        "gzip": "response_encoding_gzip", "deflate": "response_encoding_deflate",
+                        "br": "response_encoding_br",
+                    }.get(encoding.strip().lower(), "response_encoding_other")
+                emit_diagnostic(self._telemetry, phase="responses_media_type", status="observed",
+                                code=media_code)
+                check()
+                emit_diagnostic(self._telemetry, phase="responses_content_encoding",
+                                status="observed", code=encoding_code)
+                check()
+                for phase in (
+                    "responses_http_version", "responses_header_count", "responses_header_parse",
+                    "responses_media_presence", "responses_content_length",
+                    "responses_transfer_encoding",
+                ):
+                    emit_diagnostic(self._telemetry, phase=phase, status="observed",
+                                    code=_response_metadata_code(response, phase))
+                    check()
             if (
                 type(content_type) is not str
                 or content_type.split(";", 1)[0].strip().lower() != "text/event-stream"

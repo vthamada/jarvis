@@ -339,6 +339,48 @@ class AnalysisService:
         with self._lock:
             return self._envelope(self._lookup(identity, ticket))
 
+    def record_voice_event(self, identity, ticket, phase, metadata):
+        """Audit a voice complement of an already completed, persisted final.
+
+        A voice job snapshots the validated final before the analysis ticket
+        expires. Finishing its bounded synthesis does not renew that ticket or
+        call Core again. This seam writes only fixed metadata, never audio/text.
+        """
+        from shared.events import InternalEventEnvelope
+
+        with self._lock:
+            try:
+                self._bound(identity)
+                job = self._tickets.get(ticket)
+                if (job is None or job.identity != identity or self._core is None
+                        or phase not in {"requested", "finished"}
+                        or type(metadata) is not dict or set(metadata) != {
+                            "kind", "status", "authority", "evidence_mode"}
+                        or metadata["kind"] != "speech" or metadata["authority"] != "none"
+                        or metadata["status"] not in {"running", "completed", "failed"}
+                        or (phase == "requested" and metadata["status"] != "running")
+                        or (phase == "finished" and metadata["status"] == "running")
+                        or metadata["evidence_mode"] not in {"model_real", "fixture"}
+                        or self._core.observability_service.agentic_adapter is not None):
+                    return False
+                if phase == "requested" and (job.status != "completed" or job.result is None):
+                    return False
+                event = InternalEventEnvelope(
+                    event_id="web-voice-" + uuid4().hex, event_name="web_voice_" + phase,
+                    timestamp=datetime.now(UTC).isoformat(), source_service="jarvis-web-voice",
+                    payload=dict(metadata), request_id=RequestId(ticket),
+                    session_id=SessionId(identity.session_ref),
+                    tags=["local_voice", "authority_none"],
+                )
+                repository = self._core.observability_service.repository
+                repository.record_event(event)
+                return event in repository.list_events(
+                    limit=100, event_names=(event.event_name,), request_id=RequestId(ticket),
+                    session_id=SessionId(identity.session_ref),
+                )
+            except Exception:
+                return False
+
     def revoke(self, identity: SessionIdentity):
         with self._lock:
             identity = _identity(identity)

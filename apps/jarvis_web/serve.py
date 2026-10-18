@@ -11,6 +11,7 @@ ASSETS = {
     "/": ("index.html", "text/html; charset=utf-8"),
     "/index.html": ("index.html", "text/html; charset=utf-8"),
     "/styles.css": ("styles.css", "text/css; charset=utf-8"),
+    "/cinematic.css": ("cinematic.css", "text/css; charset=utf-8"),
     "/app.mjs": ("app.mjs", "text/javascript; charset=utf-8"),
     "/controller.mjs": ("controller.mjs", "text/javascript; charset=utf-8"),
     "/fixtures.mjs": ("fixtures.mjs", "text/javascript; charset=utf-8"),

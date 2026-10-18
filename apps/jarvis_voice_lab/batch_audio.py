@@ -285,6 +285,7 @@ def assemble_wavs(
         raise ValueError("invalid_audio_batch")
     pending = None
     pending_identity = None
+    pending_anchor = None
     def check():
         _check(deadline, cancelled, clock)
 
@@ -310,6 +311,11 @@ def assemble_wavs(
             pending = candidate
             created = os.fstat(handle.fileno())
             pending_identity = (created.st_dev, created.st_ino)
+            # POSIX can reuse an inode immediately after its last open handle
+            # closes. Pin this inode through publication/cleanup so a replaced
+            # name cannot acquire our identity. Preserve Windows sharing rules.
+            if os.name == "posix":
+                pending_anchor = os.dup(handle.fileno())
             os.chmod(pending, 0o600)
             with wave.open(handle, "wb") as audio:
                 audio.setnchannels(1)
@@ -363,11 +369,15 @@ def assemble_wavs(
     except (OSError, EOFError, wave.Error, struct.error, TypeError):
         raise ValueError("audio_assembly_failed") from None
     finally:
-        if pending is not None:
-            try:
-                pending_info = pending.lstat()
-                if (pending_info.st_dev, pending_info.st_ino) == pending_identity:
-                    pending.unlink()
-            except OSError:
-                # No broad cleanup or deletion of a possibly unrelated final.
-                pass
+        try:
+            if pending is not None:
+                try:
+                    pending_info = pending.lstat()
+                    if (pending_info.st_dev, pending_info.st_ino) == pending_identity:
+                        pending.unlink()
+                except OSError:
+                    # No broad cleanup or deletion of a possibly unrelated final.
+                    pass
+        finally:
+            if pending_anchor is not None:
+                os.close(pending_anchor)

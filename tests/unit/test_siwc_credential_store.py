@@ -20,6 +20,7 @@ from inference_service.siwc_contracts import DIRECT_SCOPE, SiwcCredentials, Siwc
 
 CLIENT = "oaiapp_storage_test"
 SUBJECT = "synthetic-storage-subject"
+ROOT = Path(__file__).resolve().parents[2]
 
 
 def credentials(host, **overrides):
@@ -313,6 +314,8 @@ def test_real_cross_process_os_lock_is_busy_without_unlink(store):
     child = """
 import sys
 from pathlib import Path
+# -I omits cwd/PYTHONPATH; import both shared contracts and the service explicitly.
+sys.path.insert(0, sys.argv[3])
 sys.path.insert(0, sys.argv[1])
 from inference_service.credential_store import SiwcCredentialStore
 from inference_service.siwc_contracts import SiwcError
@@ -327,13 +330,14 @@ except SiwcError as error:
     before = lockpath.read_bytes()
     with current.locked():
         result = subprocess.run([sys.executable, "-I", "-c", child, str(package_root),
-                                 str(current.directory)], capture_output=True,
+                                 str(current.directory), str(ROOT)], capture_output=True,
                                 text=True, timeout=60)
         assert result.returncode == 0
         assert result.stdout.strip() == "siwc_storage_busy"
         assert not result.stderr
     result = subprocess.run([sys.executable, "-I", "-c", child, str(package_root),
-                             str(current.directory)], capture_output=True, text=True, timeout=60)
+                             str(current.directory), str(ROOT)], capture_output=True,
+                            text=True, timeout=60)
     assert result.returncode == 0
     assert result.stdout.strip() == "acquired"
     assert lockpath.read_bytes() == before
@@ -345,6 +349,8 @@ def test_process_death_releases_os_lock_without_deleting_lock_file(store):
     child = """
 import sys
 from pathlib import Path
+# -I omits cwd/PYTHONPATH; import both shared contracts and the service explicitly.
+sys.path.insert(0, sys.argv[3])
 sys.path.insert(0, sys.argv[1])
 from inference_service.credential_store import SiwcCredentialStore
 store = SiwcCredentialStore(Path(sys.argv[2]), authorized=True)
@@ -355,7 +361,7 @@ with store.locked():
     path = current.directory / ".session.lock"
     before = path.read_bytes()
     process = subprocess.Popen([sys.executable, "-I", "-c", child, str(package_root),
-                                str(current.directory)], stdin=subprocess.PIPE,
+                                str(current.directory), str(ROOT)], stdin=subprocess.PIPE,
                                stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     ready = threading.Event()
     lines = []

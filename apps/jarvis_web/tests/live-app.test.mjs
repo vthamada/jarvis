@@ -74,7 +74,10 @@ const flow = () => [response(session()), response(envelope("issued"), 201), resp
 
 test("actual live HTML/module/style are separate from fixtures and make no voice/action claims", () => {
   assert.match(markup, /src="\/live-app\.mjs"/); assert.match(markup, /href="\/live-style\.css"/);
-  assert.doesNotMatch(markup, /fixtures\.mjs|voice-controller|type="file"|<audio|<iframe/);
+  assert.doesNotMatch(markup, /fixtures\.mjs|voice-controller|<audio|<iframe/);
+  assert.equal([...markup.matchAll(/type="file"/g)].length, 1);
+  assert.match(markup, /id="live-audio-file" type="file" accept="\.wav,audio\/wav"/);
+  assert.match(markup, /Não é voz automática nem fala ao vivo do Core/);
   assert.match(markup, /não uma identidade humana/); assert.match(markup, /Não cancela o Core/);
   assert.match(markup, /Sem modelo generativo, voz ou execução/);
   const style = readFileSync(new URL("../live-style.css", import.meta.url), "utf8");
@@ -194,4 +197,161 @@ test("direct duplicate form events while pending issue no second POST", async ()
     await click("live-stop"); gate.resolve(response(envelope("running"), 202)); await pending;
     assert.equal(calls.filter((call) => call.url === "/api/analysis").length, 1);
   });
+});
+
+function assertPublicPresenceContext(node) {
+  const text = ["live-title", "live-context-model", "live-context-memory", "live-context-session"]
+    .map((id) => node(id).textContent).join("\n");
+  assert.doesNotMatch(text, /estou ouvindo|estou escutando|microfone ativo|fala ao vivo/iu);
+  assert.doesNotMatch(text, /session:\/\/|\b(?:gpt|claude|gemini)[-_0-9]/iu);
+  for (const privateValue of [sessionRef, secret, csrf]) assert.equal(text.includes(privateValue), false);
+}
+
+for (const paired of [false, true]) {
+  test(`cinematic boot reflects ${paired ? "paired" : "unpaired"} state without invented model, memory, or listening`, async () => {
+    await withApp([paired ? response(session()) : response({ error_code: "session_refused" }, 401)],
+      async ({ node, calls }) => {
+        assert.equal(calls.length, 1); assert.equal(calls[0].url, "/api/session");
+        assert.equal(node("live-context-model").textContent, "Não informado pelo host");
+        assert.equal(node("live-context-memory").textContent, "Sem registro nesta tela");
+        assert.equal(node("live-context-session").textContent, paired ? "Sessão local pareada" : "Não pareada");
+        assert.equal(node("live-title").textContent, paired ? "Pronto para conversar" : "Um ajuste antes de continuar");
+        assert.equal(node("live-generative-consent").checked, false);
+        assert.equal(node("live-final").textContent, ""); assertPublicPresenceContext(node);
+      });
+  });
+}
+
+for (const [id, expected] of [
+  ["live-briefing-compare", query],
+  ["live-briefing-review", "Revise a documentação, o painel de telemetria e o relatório de baseline do piloto."],
+]) {
+  test(`${id} only fills and focuses the composer without network, consent, or canonical changes`, async () => {
+    await withApp([response(session())], async ({ node, calls, click }) => {
+      const before = calls.length, focus = node("live-query").focusCount;
+      assert.equal(node(id).disabled, false); assert.equal(node("live-generative-consent").checked, false);
+      await click(id);
+      assert.equal(node("live-query").value, expected); assert.equal(node("live-query").focusCount, focus + 1);
+      assert.equal(calls.length, before); assert.equal(node("live-generative-consent").checked, false);
+      assert.equal(node("live-final").textContent, ""); assert.equal(node("live-result").hidden, true);
+      assertPublicPresenceContext(node);
+    });
+  });
+  test(`${id} cannot prepare or dispatch a query in an unpaired session even with a forged click`, async () => {
+    await withApp([response({ error_code: "session_refused" }, 401)], async ({ node, calls, click }) => {
+      const focus = node("live-query").focusCount;
+      node("live-query").value = "Rascunho local não enviado";
+      assert.equal(node(id).disabled, true); await click(id);
+      assert.equal(node("live-query").value, "Rascunho local não enviado");
+      assert.equal(node("live-query").focusCount, focus); assert.equal(calls.length, 1);
+      assert.equal(node("live-generative-consent").checked, false);
+    });
+  });
+}
+
+test("Briefing configuration link opens and focuses pairing without a submission or new request", async () => {
+  await withApp([response(session())], async ({ node, calls, click }) => {
+    node("live-pairing-details").open = false;
+    const focus = node("live-pairing-summary").focusCount;
+    await click("live-briefing-settings");
+    assert.equal(node("live-pairing-details").open, true);
+    assert.equal(node("live-pairing-summary").focusCount, focus + 1);
+    assert.equal(node("live-query").value, ""); assert.equal(node("live-generative-consent").checked, false);
+    assert.equal(calls.length, 1); assert.equal(node("live-context-session").textContent, "Sessão local pareada");
+  });
+});
+
+test("pairing changes the cinematic context only after the verified local response and never displays its secret", async () => {
+  const gate = deferred();
+  await withApp([response({ error_code: "session_refused" }, 401), () => gate.promise],
+    async ({ node, calls }) => {
+      node("live-secret").value = secret;
+      const pairing = node("live-pair-form").dispatch("submit"); await flush();
+      assert.equal(node("live-secret").value, "");
+      assert.equal(node("live-title").textContent, "Conectando ao seu Core…");
+      assert.equal(node("live-context-session").textContent, "Verificando…");
+      assert.equal(node("live-context-model").textContent, "Não informado pelo host");
+      assertPublicPresenceContext(node);
+      gate.resolve(response(session())); await pairing;
+      assert.equal(node("live-title").textContent, "Pronto para conversar");
+      assert.equal(node("live-context-session").textContent, "Sessão local pareada");
+      assert.equal(node("live-context-memory").textContent, "Sem registro nesta tela");
+      assert.equal(calls.length, 2); assertPublicPresenceContext(node);
+    });
+});
+
+test("submitting, waiting, and completed update the cinematic context while preserving exact native final bytes", async () => {
+  const issued = deferred(), completed = deferred();
+  await withApp([response(session()), () => issued.promise, response(envelope("running"), 202), () => completed.promise],
+    async ({ node, calls, click, submit }) => {
+      assert.equal(node("live-title").textContent, "Pronto para conversar");
+      const pending = submit(); await flush();
+      assert.equal(node("live-title").textContent, "Seu pedido está a caminho");
+      assert.equal(node("live-context-session").textContent, "Sessão local pareada");
+      assert.equal(node("live-context-memory").textContent, "Sem registro nesta tela");
+      assert.equal(node("live-context-model").textContent, "Não informado pelo host");
+      assert.equal(node("live-final").textContent, "");
+      const before = calls.length, focus = node("live-query").focusCount;
+      for (const id of ["live-briefing-compare", "live-briefing-review"]) {
+        assert.equal(node(id).disabled, true); await click(id);
+      }
+      assert.equal(node("live-query").value, query); assert.equal(node("live-query").focusCount, focus);
+      assert.equal(calls.length, before); assert.equal(node("live-generative-consent").checked, false);
+      issued.resolve(response(envelope("issued"), 201)); await flush();
+      assert.equal(node("live-title").textContent, "Preparando sua resposta…");
+      assert.equal(node("live-context-memory").textContent, "Sem registro nesta tela");
+      assert.equal(node("live-context-model").textContent, "Não informado pelo host");
+      assertPublicPresenceContext(node);
+      completed.resolve(response(envelope())); await pending;
+      assert.equal(node("live-title").textContent, "Aqui está sua resposta");
+      assert.equal(node("live-context-memory").textContent, "Final canônica recebida");
+      assert.equal(node("live-context-model").textContent, "Resposta nativa");
+      assert.equal(node("live-final").textContent, final().response_text);
+      assert.equal(node("live-result-query").textContent, query); assert.equal(calls.length, 4);
+      assertPublicPresenceContext(node);
+    });
+});
+
+for (const [status, evidenceMode, expected] of [
+  ["accepted", "injected_transport", "Complemento de teste"],
+  ["accepted", "live", "Complemento não verificado"],
+  ["rejected", null, "Complemento recusado"],
+  ["withheld", null, "Complemento retido"],
+]) {
+  test(`recovered ${status}/${evidenceMode} context labels only the public status, not an invented model`, async () => {
+    const value = final({ generative_status: status, generative_evidence_mode: evidenceMode,
+      generative_error_code: status === "accepted" ? null : "scope_denied",
+      generative_analysis_characters: status === "accepted" ? 1 : 0 });
+    await withApp([response(session({ last_ticket: ticket })), response(session({ last_ticket: ticket })),
+      response(envelope("completed", { schema_version: "jarvis-local-analysis-v2", result: value }))],
+    async ({ node, calls, click }) => {
+      assert.equal(node("live-context-model").textContent, "Não informado pelo host");
+      await click("live-recover");
+      assert.equal(node("live-context-model").textContent, expected);
+      assert.equal(node("live-context-memory").textContent, "Final canônica recebida");
+      assert.equal(node("live-title").textContent, "Aqui está sua resposta");
+      assert.equal(node("live-final").textContent, value.response_text);
+      assert.equal(node("live-generative-consent").checked, false);
+      assert.ok(calls.every((call) => call.method === "GET")); assertPublicPresenceContext(node);
+    });
+  });
+}
+
+test("foreign session clears stale cinematic memory/model context together with the canonical display", async () => {
+  const foreign = "session://web-live/" + "f".repeat(32);
+  await withApp([...flow(), response(session({ session_ref: foreign, last_ticket: ticket }))],
+    async ({ node, submit, click, calls }) => {
+      await submit(); assert.equal(node("live-final").textContent, final().response_text);
+      assert.equal(node("live-context-memory").textContent, "Final canônica recebida");
+      await click("live-recover");
+      assert.equal(node("live-title").textContent, "Um ajuste antes de continuar");
+      assert.equal(node("live-context-session").textContent, "Não pareada");
+      assert.equal(node("live-context-memory").textContent, "Sem registro nesta tela");
+      assert.equal(node("live-context-model").textContent, "Não informado pelo host");
+      assert.equal(node("live-final").textContent, ""); assert.equal(node("live-result").hidden, true);
+      assert.equal(node("live-query").value, ""); assert.equal(node("live-generative-consent").checked, false);
+      assert.equal(node("live-briefing-compare").disabled, true); assert.equal(node("live-briefing-review").disabled, true);
+      assert.equal(calls.length, 5); assert.equal(calls.at(-1).url, "/api/session");
+      assertPublicPresenceContext(node); assert.equal(node("live-context-session").textContent.includes(foreign), false);
+    });
 });

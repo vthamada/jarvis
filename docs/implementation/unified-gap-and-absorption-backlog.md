@@ -1,5 +1,91 @@
 # Unified Gap and Absorption Backlog
 
+2026-10-17, F01/F04:25 missoes publicas sinteticas/runner comparativo implementados.
+Novo gap comprovado no recorte: adapter serializa protocolo/fontes na query e
+roteamento lexical pede esclarecimento, impedindo produto avaliavel. Priorizar
+entrada estruturada sem bypass do Core, depois tarefas reais consentidas e
+comparacao de qualidade. Piloto OAuth expirado nao e aceite nem diagnostico
+novo do MB236. Detalhes: docs/operations/harness-mission-campaign.md.
+
+2026-10-17, F05: retomada nativa assist-only validada localmente. Input privado
+persistente, claim/fencing pre-dispatch e recibo readonly da final Core apos
+queda, sem reexecucao incerta ou memoria factual paralela. Nao e continuacao
+duravel do loop modelo/ferramenta nem reconciliacao de efeitos externos;
+esses gaps, scheduler, conector e browser reais seguem pendentes. Regressao612/
+6 skips e smoke CLI passaram. Standard Windows exit0:10131 passed/121 skipped,
+zero falhas/errors;12 hashes preservados. F05 foundation/MB236 blocked mantidos.
+docs/operations/durable-native-task-resume.md.
+Notas anteriores abaixo sao historicas.
+
+2026-10-16: loop readonly nativo com proposta do modelo, politica por recurso/
+fingerprint, leitura de relatorios do host e continuacao ate sintese canonica
+implementado opt-in, com validacao local e gate standard aprovados. Nao fecha loop geral/autonomia;
+retomada duravel/receipts, conector e browser reais continuam pendentes.
+Sem substituir Core, sem nova dependencia central ou chamada OAuth.
+Detalhes: docs/operations/model-tool-loop-core.md.
+
+2026-10-14: F02 deadline readonly agora cobre VM/lock SQLite; F05/F11 registra
+uma unica tentativa de fixture Docker fixa via ledger existente, sem replay,
+com binding/fencing/cancelamento sticky.4 fisicos passaram/cleanup/restart;
+novo standard exit0/9803:9684 passed/119 skipped/zero falhas,13 hashes preservados.
+Primeiro8falhas MCP/harness registrados; CLI extra recusada/outro job passou,
+confiabilidade inconclusiva. Timeouts anteriores documentados/causa nao comprovada.
+Sem retencao aplicada, executor generico, grant ou promocao macro; MB236 blocked.
+Runbook: docs/operations/memory-deadline-and-code-fixture-jobs.md.
+
+2026-10-13: F02 revisao advisory/F03 comparacao exata de trechos e F11 prova
+Linux de quatro fixtures fixas aprovados localmente; nao politica canonica,
+pesquisa generativa util ou engine generico. Standard Windows exit0/9701 casos,
+9586 passed/115 skipped/zero falhas;15 hashes preservados.
+MB236 blocked/ultimo MB235/REA somente referencia, sem nova frente macro.
+Runbook: docs/operations/local-retention-source-comparison-and-code-fixture.md.
+
+2026-10-13: F05/F06 ganham leitura manual de estados selecionados no host pela
+Web pareada; nao executor, notificacao ou reconciliacao. Standard Windows passou.
+MB236 blocked/ultimo MB235; REA permanece somente referencia analisada, sem
+instalacao/absorcao. Runbook: docs/operations/local-job-activity-web.md.
+Notas anteriores abaixo historicas; nao ha nova frente macro nesta continuidade.
+
+Atualizacao 2026-10-12, sondagem limitada autorizada: MB236 permanece blocked.
+Sessao expirada renovada uma vez, mesma conta/modelo/pergunta; unico POST200
+sem CT, TE chunked. Uma leitura diagnostica416/4096 bytes teve prefixo SSE
+aparente nao validado, sem corpo bruto persistido/aceito ou guard relaxado.
+Export readonly: unico turno/final nativa2635/21 eventos, ALLOW/rejected/analysis0.
+Prova browser desta tentativa falhou e nao foi repetida; instancia encerrada.
+Origem exata nao comprovada; nao homologa modelo. F05 atividade readonly,
+F13 piloto MCP/relatorio Core e T03 fixtures/runner Linux validados localmente.
+Standard Windows9303 passed/111 skipped e Linux9185 passed/239 skipped/zero
+falhas. Contagens derivadas dos marcadores -qq; scopes/skips nao promovem produto.
+Ultimo MB integrado MB235/MB236 blocked; pacotes conforme execution-backlog.md.
+Runbook: docs/operations/parallel-wave-readiness-activity-and-linux.md.
+Notas anteriores abaixo sao historicas; estado OAuth atual no runbook.
+
+Estado vigente apos diagnostico de parsing/enquadramento - 2026-10-12:
+MB236 blocked para aceite real; gate standard9111 passed/111 skipped/zero falhas.
+Nova tentativa unica gpt-6-astra: HTTP1.1/200, headers presentes/parser sem
+defeitos detectados, Content-Type ausente/Transfer-Encoding chunked declarados.
+Recusa antes do corpo/SSE; final nativa2635 exata a Memory/export/GET/reload.
+Zero refresh/reenvio/fallback, stores retidos. Nao prova corpo valido nem origem
+da omissao. Proximo recorte: investigar origem da resposta sem declaracao SSE;
+nao relaxar parser e nao reenviar sem novo consentimento. Ultimo validado MB235,
+F01/F06 partial/modelo/qualidade nao aceitos. Detalhes no runbook
+real-oauth-acceptance.md; notas anteriores abaixo sao historicas.
+
+
+Atualizacao apos retomada 2026-10-12: MB236 blocked para aceite real.
+Diagnostico MIME/encoding validado:85 novos/772 focados e standard global
+Windows9103 casos (8992 passed/111 skipped/zero falhas). Login oficial concluido,
+usuario confirmou mesma conta/plan scope=true; novo registro local pois mapping
+antigo ausente, nao comparavel. Sessao nao expirada, zero refresh/import de tokens.
+Uma tentativa unica gpt-6-astra: catalogo/selecao/provider passaram, HTTP200/
+response_media_type_missing/response_encoding_identity, recusa antes de SSE.
+Categorias nao provam corpo valido ou causa do servidor. ALLOW/rejected, final
+nativa2635 exata ao export/GET/reload; sem reenvio/fallback/tools. Stores retidos,
+instancia propria fechada. Proximo recorte candidato: investigar media type
+ausente/vazio com DOR/corpus/gate, sem relaxar parser; nova inferencia novo
+consentimento. Ultimo validado MB235, F01/F06 partial/modelo/qualidade nao aceitos.
+Runbook real-oauth-acceptance.md; notas abaixo sao historicas.
+
 MB236 2026-10-06: blocked para aceite real. Catalogo bounded e diagnostico
 host opt-in validados:326 testes novos/535 focados e standard global Windows
 8994 casos (8883 passed/111 skipped/zero falhas). Segunda tentativa unica

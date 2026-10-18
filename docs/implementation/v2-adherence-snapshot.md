@@ -1,5 +1,61 @@
 # V2 Adherence Snapshot
 
+2026-10-17, F01/F04: corpus publico de25 missoes e comparador com recusas/efeitos
+explicitados, sem ganho de inteligencia demonstrado. Baseline nativo sem
+produto aceito neste protocolo; piloto gpt-6.1-sol parou por sessao expirada.
+Estados macro iguais. Evidencia e gate: docs/operations/harness-mission-campaign.md.
+
+2026-10-17, F05: retomada duravel nativa assist-only validada localmente. Input
+persistido no ledger, claim transferivel so antes do dispatch, final Core
+recuperavel por recibo exato sem nova chamada. Started incerto, pause/cancel e
+prazo nao autorizam replay. F05 foundation/MB236 blocked/ultimo MB235 iguais;
+modelo/ferramentas duraveis e scheduler nao entregues. Regressao612/6skips e
+smoke CLI passaram; standard Windows exit0:10131 passed/121 skipped/zero
+falhas/errors;12 hashes preservados.
+Runbook: docs/operations/durable-native-task-resume.md; notas abaixo historicas.
+
+2026-10-16: F01/F03 ganham primeiro loop nativo readonly modelo/Core/leitor/
+observacao/continuacao, desativado por padrao. Politica por call/fingerprint,
+relatorios do host e final canonica; validacao local/gate standard aprovados. Modelo real,
+retomada duravel, UI e executor geral nao promovidos. MB236 blocked/ultimo
+MB235 preservados. Runbook: docs/operations/model-tool-loop-core.md.
+
+2026-10-14: deadline readonly F02 inclui VM/lock; F05/F11 agora registra
+uma tentativa de fixture Docker fixa no ledger existente.4 fisicos passaram,
+cleanup/restart confirmados, no-replay e nenhuma prova historica promovida.
+F02 partial/F05-F11 foundation/MB236 blocked iguais. Novo standard exit0/9803:
+9684 passed/119 skipped/zero falhas,13 hashes preservados; primeiro8falhas MCP
+e harness registrados. CLI extra recusada/diagnostico outro job passou, ainda
+confiabilidade inconclusiva;
+dois timeouts iniciais documentados com causa nao comprovada. Runbook:
+docs/operations/memory-deadline-and-code-fixture-jobs.md.
+
+2026-10-13: F02/F03 ganham CLIs advisory readonly de retencao/comparacao;
+F11 quatro fixtures fixas em Docker Linux real/cleanup verificado. F02/F03
+partial/F11 foundation/MB236 blocked/ultimo MB235 iguais, nenhuma capacidade
+promovida. Standard Windows exit0/9701 casos:9586 passed/115 skipped/zero falhas,
+15 hashes preservados; Linux4 fisicos separado. Skips nao promovem produto.
+Runbook: docs/operations/local-retention-source-comparison-and-code-fixture.md.
+
+2026-10-13: F05/F06 recebem painel readonly manual de atividade selecionada no
+host, pareamento/CSRF e fences. Gate standard Windows aprovado. Mantem F05
+foundation/F06 partial/MB236 blocked/ultimo MB235, sem capacidade promovida.
+Runbook: docs/operations/local-job-activity-web.md. Notas abaixo historicas.
+
+Atualizacao 2026-10-12, sondagem limitada autorizada: MB236 permanece blocked.
+Sessao expirada renovada uma vez, mesma conta/modelo/pergunta; unico POST200
+sem CT, TE chunked. Uma leitura diagnostica416/4096 bytes teve prefixo SSE
+aparente nao validado, sem corpo bruto persistido/aceito ou guard relaxado.
+Export readonly: unico turno/final nativa2635/21 eventos, ALLOW/rejected/analysis0.
+Prova browser desta tentativa falhou e nao foi repetida; instancia encerrada.
+Origem exata nao comprovada; nao homologa modelo. F05 atividade readonly,
+F13 piloto MCP/relatorio Core e T03 fixtures/runner Linux validados localmente.
+Standard Windows9303 passed/111 skipped e Linux9185 passed/239 skipped/zero
+falhas. Contagens derivadas dos marcadores -qq; scopes/skips nao promovem produto.
+Ultimo MB integrado MB235/MB236 blocked; pacotes conforme execution-backlog.md.
+Runbook: docs/operations/parallel-wave-readiness-activity-and-linux.md.
+Notas anteriores abaixo sao historicas; estado OAuth atual no runbook.
+
 ## 1. Objetivo
 
 Este documento registra um snapshot de aderencia entre o estado atual do repositorio,
@@ -25,6 +81,32 @@ Leitura correta:
 ---
 
 ## 2. Fotografia atual
+
+Estado vigente apos diagnostico de parsing/enquadramento - 2026-10-12:
+MB236 blocked para aceite real; gate standard9111 passed/111 skipped/zero falhas.
+Nova tentativa unica gpt-6-astra: HTTP1.1/200, headers presentes/parser sem
+defeitos detectados, Content-Type ausente/Transfer-Encoding chunked declarados.
+Recusa antes do corpo/SSE; final nativa2635 exata a Memory/export/GET/reload.
+Zero refresh/reenvio/fallback, stores retidos. Nao prova corpo valido nem origem
+da omissao. Proximo recorte: investigar origem da resposta sem declaracao SSE;
+nao relaxar parser e nao reenviar sem novo consentimento. Ultimo validado MB235,
+F01/F06 partial/modelo/qualidade nao aceitos. Detalhes no runbook
+real-oauth-acceptance.md; notas anteriores abaixo sao historicas.
+
+
+Atualizacao apos retomada 2026-10-12: MB236 blocked para aceite real.
+Diagnostico MIME/encoding validado:85 novos/772 focados e standard global
+Windows9103 casos (8992 passed/111 skipped/zero falhas). Login oficial concluido,
+usuario confirmou mesma conta/plan scope=true; novo registro local pois mapping
+antigo ausente, nao comparavel. Sessao nao expirada, zero refresh/import de tokens.
+Uma tentativa unica gpt-6-astra: catalogo/selecao/provider passaram, HTTP200/
+response_media_type_missing/response_encoding_identity, recusa antes de SSE.
+Categorias nao provam corpo valido ou causa do servidor. ALLOW/rejected, final
+nativa2635 exata ao export/GET/reload; sem reenvio/fallback/tools. Stores retidos,
+instancia propria fechada. Proximo recorte candidato: investigar media type
+ausente/vazio com DOR/corpus/gate, sem relaxar parser; nova inferencia novo
+consentimento. Ultimo validado MB235, F01/F06 partial/modelo/qualidade nao aceitos.
+Runbook real-oauth-acceptance.md; notas abaixo sao historicas.
 
 Atualizacao vigente 2026-10-06: MB236 blocked para aceite real. Catalogo
 bounded e diagnostico host opt-in validados:326 novos/535 focados e standard

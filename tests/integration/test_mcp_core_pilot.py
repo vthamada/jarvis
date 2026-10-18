@@ -49,9 +49,13 @@ def test_real_stdio_observation_passes_actual_core_governance_memory_and_final(
     monkeypatch.setenv("DATABASE_URL", "postgresql://secret-never-connect")
     monkeypatch.setenv("LANGSMITH_TRACING", "true")
     binding = FixtureBinding("operator://private-label", "session://private-label")
+    # Canonical evidence/redaction is not a startup latency benchmark. Preserve
+    # the production deadline and dedicated expiration tests; allow the existing
+    # bounded maximum for real subprocess/Core startup on loaded Windows hosts.
     result = asyncio.run(
         pilot.run_mcp_core_pilot(
-            **values, fixture_scenario=scenario, binding=binding, request_id="mcp-pilot-bound"
+            **values, fixture_scenario=scenario, binding=binding, request_id="mcp-pilot-bound",
+            timeout_seconds=10,
         )
     )
     assert result.status == "completed", result.reason
@@ -278,16 +282,28 @@ def test_observation_identity_or_authority_drift_never_enters_core(tmp_path, mon
 def test_core_binding_and_grant_drift_cannot_be_attested(tmp_path, monkeypatch, change):
     values = options(tmp_path)
     original = pilot._isolated_core
+    mutated = []
+    # Attestation is not a Core/schema startup latency benchmark. Isolate only
+    # this module's report-entry clock; client/asyncio/UTC clocks stay natural.
+    # Dedicated expiration tests still exercise the production deadline.
+    monkeypatch.setattr(pilot, "time", SimpleNamespace(monotonic=lambda: 0.0))
 
     def build(runtime):
         core = original(runtime)
         handle = core.handle_input
-        core.handle_input = lambda contract: replace(handle(contract), **change)
+
+        def mutate(contract):
+            response = replace(handle(contract), **change)
+            mutated.append(change)
+            return response
+
+        core.handle_input = mutate
         return core
 
     monkeypatch.setattr(pilot, "_isolated_core", build)
     with pytest.raises(ValueError, match="core_final_binding_refused"):
-        asyncio.run(pilot.run_mcp_core_pilot(**values))
+        asyncio.run(pilot.run_mcp_core_pilot(**values, timeout_seconds=10))
+    assert mutated == [change]
 
 
 @pytest.mark.parametrize("failure", ["memory", "events"])

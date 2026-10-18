@@ -1,6 +1,14 @@
 """One explicit fixture step; no generic executor, subprocess or tool port."""
 
-from .store import CORE_TASK, JobSnapshot, JobStoreError, SqliteJobStore, _ref
+from .store import (
+    CODE_FIXTURE_TASKS,
+    CORE_TASK,
+    DURABLE_CORE_TASK,
+    JobSnapshot,
+    JobStoreError,
+    SqliteJobStore,
+    _ref,
+)
 
 
 class FixtureJobWorker:
@@ -21,8 +29,10 @@ class FixtureJobWorker:
         lease_seconds: float = 30,
     ) -> JobSnapshot:
         before = self.store.get(job_id, actor_ref=actor_ref, session_ref=session_ref)
-        if before.spec.task_ref == CORE_TASK:
+        if before.spec.task_ref in {CORE_TASK, DURABLE_CORE_TASK}:
             raise JobStoreError("fixture_worker_core_refused")
+        if before.spec.task_ref in CODE_FIXTURE_TASKS:
+            raise JobStoreError("fixture_worker_code_refused")
         claim = self.store.claim(
             job_id,
             worker_id=self.worker_id,

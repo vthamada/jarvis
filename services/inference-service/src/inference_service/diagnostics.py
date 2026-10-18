@@ -7,7 +7,10 @@ Sinks are trusted synchronous observers, not a deadline or process sandbox.
 
 DIAGNOSTIC_PHASES = frozenset({
     "profile_setup", "session_preflight", "catalog", "model_selection", "provider_setup",
-    "responses_request", "responses_http", "responses_stream", "provider_result",
+    "responses_request", "responses_http", "responses_media_type", "responses_content_encoding",
+    "responses_http_version", "responses_header_count", "responses_header_parse",
+    "responses_media_presence", "responses_content_length", "responses_transfer_encoding",
+    "responses_stream", "provider_result",
     "session_result", "profile_result",
 })
 DIAGNOSTIC_STATUSES = frozenset({
@@ -20,6 +23,19 @@ DIAGNOSTIC_CODES = frozenset({
     "plan_usage_scope_missing", "credential_expired", "tls_verification_required",
     "plan_authentication_refused", "plan_permission_refused", "plan_usage_limited",
     "http_request_refused", "unsupported_response_encoding", "transport_error",
+    "response_media_type_sse", "response_media_type_json", "response_media_type_html",
+    "response_media_type_missing", "response_media_type_other", "response_media_type_invalid",
+    "response_encoding_identity", "response_encoding_gzip", "response_encoding_deflate",
+    "response_encoding_br", "response_encoding_other", "response_encoding_invalid",
+    "response_http_1_0", "response_http_1_1", "response_http_other", "response_http_unavailable",
+    "response_headers_empty", "response_headers_present", "response_headers_unavailable",
+    "response_header_parse_clean", "response_header_parse_missing_separator",
+    "response_header_parse_other_defect", "response_header_parse_unavailable",
+    "response_media_absent", "response_media_present", "response_media_presence_unavailable",
+    "response_length_absent", "response_length_zero", "response_length_nonzero",
+    "response_length_invalid", "response_length_multiple", "response_length_unavailable",
+    "response_transfer_absent", "response_transfer_chunked", "response_transfer_other",
+    "response_transfer_invalid", "response_transfer_multiple", "response_transfer_unavailable",
     "event_limit_exceeded", "ambiguous_stream_terminal", "malformed_sse_event",
     "malformed_stream_chunk", "stream_limit_exceeded", "line_limit_exceeded",
     "ambiguous_sse_event", "stream_interrupted", "event_after_terminal", "malformed_event",

@@ -100,18 +100,30 @@ def run_voice_lab_batch(
     reference_duration_seconds: float = 10, reference_transcript: str | None = None,
     transcript_confirmed: bool = False, seed: int | None = None,
     clock: Callable[[], float] = time.monotonic,
+    diagnostics: bool = False,
+    reuse_voice_prompt: bool = False,
 ) -> BatchLabResult:
     """Explicit complement, not playback. No retries, remote SDK or partial result.
 
     The single deadline starts before file inspection and never resets by part.
     A synchronous fixture cannot be preempted; late returns are still refused.
     Real SDK processes are killed at the deadline by the supervising parent.
+    Opt-in diagnostics retain bounded private phase metadata beside the worker
+    artifacts. They never enter the audio manifest, stdout or public result.
+    Experimental Qwen prompt reuse is explicit and scoped to this one campaign;
+    no speaker embedding or resident model is retained between campaigns.
     """
     if authorized is not True:
         raise ValueError("authorization_required")
+    if type(diagnostics) is not bool:
+        raise ValueError("invalid_diagnostics_flag")
+    if type(reuse_voice_prompt) is not bool:
+        raise ValueError("invalid_voice_prompt_reuse_flag")
     if (type(engine) is not str or engine not in ENGINES
             or type(device) is not str or device not in {"cpu", "cuda:0"}):
         raise ValueError("invalid_engine_or_device")
+    if reuse_voice_prompt and engine != "qwen3_tts":
+        raise ValueError("voice_prompt_reuse_requires_qwen")
     if (type(timeout_seconds) not in (int, float) or not 0 < timeout_seconds <= 1800
             or not math.isfinite(timeout_seconds) or not callable(cancelled)
             or not callable(clock)):
@@ -198,6 +210,8 @@ def run_voice_lab_batch(
         "reference_transcript": reference_transcript, "transcript_confirmed": transcript_confirmed,
         "seed": seed,
     }
+    if reuse_voice_prompt:
+        request["reuse_voice_prompt"] = True
     payload = json.dumps(request, ensure_ascii=False, allow_nan=False).encode("utf-8")
     if len(payload) > MAX_REQUEST_BYTES:
         return result("failed", "batch_request_too_large")
@@ -217,7 +231,8 @@ def run_voice_lab_batch(
         else:
             with spool_path.open("xb") as spool:
                 process = subprocess.Popen(
-                    [str(executable), "-I", str(Path(__file__).with_name("worker.py"))],
+                    [str(executable), "-I", str(Path(__file__).with_name("worker.py")),
+                     *(["--diagnostics"] if diagnostics else [])],
                     stdin=subprocess.PIPE, stdout=spool, stderr=subprocess.DEVNULL,
                     cwd=directory, env=worker_environment(executable, directory),
                     creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0,

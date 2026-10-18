@@ -1,5 +1,50 @@
 # MB222: conta local ChatGPT e catalogo SIWC
 
+Atualizacao 2026-10-17: piloto separado de missoes publicas com gpt-6.1-sol,
+mesma conta, teto10 autorizado. Primeira tentativa recusada no catalogo por
+siwc_credential_expired; zero inferencias concluidas, sem refresh/retry/fallback.
+MB236 nao foi desbloqueado. Detalhes: harness-mission-campaign.md.
+
+Atualizacao 2026-10-12, sondagem limitada autorizada: MB236 permanece blocked.
+Sessao expirada renovada uma vez, mesma conta/modelo/pergunta; unico POST200
+sem CT, TE chunked. Uma leitura diagnostica416/4096 bytes teve prefixo SSE
+aparente nao validado, sem corpo bruto persistido/aceito ou guard relaxado.
+Export readonly: unico turno/final nativa2635/21 eventos, ALLOW/rejected/analysis0.
+Prova browser desta tentativa falhou e nao foi repetida; instancia encerrada.
+Origem exata nao comprovada; nao homologa modelo. F05 atividade readonly,
+F13 piloto MCP/relatorio Core e T03 fixtures/runner Linux validados localmente.
+Standard Windows9303 passed/111 skipped e Linux9185 passed/239 skipped/zero
+falhas. Contagens derivadas dos marcadores -qq; scopes/skips nao promovem produto.
+Ultimo MB integrado MB235/MB236 blocked; pacotes conforme execution-backlog.md.
+Runbook: docs/operations/parallel-wave-readiness-activity-and-linux.md.
+Notas anteriores abaixo sao historicas; estado OAuth atual no runbook.
+
+Estado vigente apos diagnostico de parsing/enquadramento - 2026-10-12:
+MB236 blocked para aceite real; gate standard9111 passed/111 skipped/zero falhas.
+Nova tentativa unica gpt-6-astra: HTTP1.1/200, headers presentes/parser sem
+defeitos detectados, Content-Type ausente/Transfer-Encoding chunked declarados.
+Recusa antes do corpo/SSE; final nativa2635 exata a Memory/export/GET/reload.
+Zero refresh/reenvio/fallback, stores retidos. Nao prova corpo valido nem origem
+da omissao. Proximo recorte: investigar origem da resposta sem declaracao SSE;
+nao relaxar parser e nao reenviar sem novo consentimento. Ultimo validado MB235,
+F01/F06 partial/modelo/qualidade nao aceitos. Detalhes no runbook
+real-oauth-acceptance.md; notas anteriores abaixo sao historicas.
+
+
+Atualizacao apos retomada 2026-10-12: MB236 blocked para aceite real.
+Diagnostico MIME/encoding validado:85 novos/772 focados e standard global
+Windows9103 casos (8992 passed/111 skipped/zero falhas). Login oficial concluido,
+usuario confirmou mesma conta/plan scope=true; novo registro local pois mapping
+antigo ausente, nao comparavel. Sessao nao expirada, zero refresh/import de tokens.
+Uma tentativa unica gpt-6-astra: catalogo/selecao/provider passaram, HTTP200/
+response_media_type_missing/response_encoding_identity, recusa antes de SSE.
+Categorias nao provam corpo valido ou causa do servidor. ALLOW/rejected, final
+nativa2635 exata ao export/GET/reload; sem reenvio/fallback/tools. Stores retidos,
+instancia propria fechada. Proximo recorte candidato: investigar media type
+ausente/vazio com DOR/corpus/gate, sem relaxar parser; nova inferencia novo
+consentimento. Ultimo validado MB235, F01/F06 partial/modelo/qualidade nao aceitos.
+Runbook real-oauth-acceptance.md; notas abaixo sao historicas.
+
 Atualizacao MB236 2026-10-06: diagnostico host opt-in validado com326 novos,
 535 focados e standard global Windows8994 casos/8883 passed/111 skipped/
 zero falhas. Sessao escolhida expirada; um refresh explicito autorizado passou.

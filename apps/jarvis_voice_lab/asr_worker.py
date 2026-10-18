@@ -10,6 +10,14 @@ import os
 import sys
 from pathlib import Path
 
+DECODING_BEAMS = {"quality": 5, "conversation": 1}
+
+
+def validate_decoding_profile(value):
+    if type(value) is not str or value not in DECODING_BEAMS:
+        raise ValueError("invalid_asr_decoding_profile")
+    return value
+
 
 def transcript_document(result, duration):
     if not isinstance(result, dict) or not isinstance(result.get("chunks"), list):
@@ -75,8 +83,9 @@ def transcript_document(result, duration):
     )
 
 
-def transcribe_windows(asr, audio, rate, duration):
+def transcribe_windows(asr, audio, rate, duration, *, decoding_profile="quality"):
     """Independent 20s windows; timestamps locate windows, not individual words."""
+    profile = validate_decoding_profile(decoding_profile)
     chunks = []
     window_frames = rate * 20
     for offset in range(0, len(audio), window_frames):
@@ -87,7 +96,7 @@ def transcribe_windows(asr, audio, rate, duration):
             generate_kwargs=dict(
                 language="portuguese",
                 task="transcribe",
-                num_beams=5,
+                num_beams=DECODING_BEAMS[profile],
                 max_new_tokens=256,
                 no_repeat_ngram_size=4,
             ),
@@ -106,6 +115,7 @@ def transcribe_windows(asr, audio, rate, duration):
 
 
 def generate(request):
+    profile = validate_decoding_profile(request.get("decoding_profile", "quality"))
     import librosa
     import numpy as np
     import soundfile as sf
@@ -141,7 +151,8 @@ def generate(request):
         batch_size=1,
         return_timestamps=False,
     )
-    result = transcribe_windows(asr, audio, 16000, request["duration_seconds"])
+    result = transcribe_windows(asr, audio, 16000, request["duration_seconds"],
+                                decoding_profile=profile)
     text, data = transcript_document(result, request["duration_seconds"])
     output = Path(request["output_directory"])
     for name, value in (
@@ -167,6 +178,15 @@ def main():
         if request.get("authorized") is not True or request.get("device") not in {"cpu", "cuda:0"}:
             return 2
         result["run_id"] = request["run_id"]
+        if "worker_lifecycle" in request:
+            # Isolated script execution has no package import path. This stdlib-only
+            # helper completes the private handle handshake before any SDK import.
+            lifecycle_spec = importlib.util.spec_from_file_location(
+                "offline_worker_lifecycle", Path(__file__).with_name("worker_lifecycle.py")
+            )
+            lifecycle = importlib.util.module_from_spec(lifecycle_spec)
+            lifecycle_spec.loader.exec_module(lifecycle)
+            lifecycle.acknowledge_worker(request)
         spec = importlib.util.spec_from_file_location(
             "offline_voice_guard", Path(__file__).with_name("worker.py")
         )

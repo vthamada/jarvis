@@ -1,5 +1,91 @@
 # Mapa executavel de implementacao paralela do JARVIS
 
+Continuidade F01/F04 2026-10-17: tres workers disjuntos (corpus/grader,
+campanha/CLI, referencia de modelo/revisao) e integracao/verificacao central.
+25 missoes sinteticas publicas, nao holdout secreto nem execucao de Hermes;
+baseline e piloto limitado registrados, sem promocao macro/MB236. Runbook:
+docs/operations/harness-mission-campaign.md.
+
+Continuidade F05 2026-10-17: tres workers disjuntos (checkpoint/store, recibo
+canonico readonly, E2E/crashes reais) e integrador runner/CLI/docs/verificacao.
+Retomada nativa assist-only validada localmente, WIP1 e sem depender do MB236.
+Revisao independente detectou bordas busy/input/preflight, com regressao RED
+antes das correcoes. Nenhum worker executa processos;612 regressao/6 skips e
+smoke CLI passaram. Standard central Windows exit0:10131 passed/121 skipped,
+zero falhas/errors;12 hashes preservados. Sem promocao macro.
+Runbook: docs/operations/durable-native-task-resume.md.
+
+Continuidade F01/F03 2026-10-16: tres workers com escrita disjunta (loop shared,
+reader e testes Core/policy), integracao central Orchestrator/Synthesis/CLI.
+Primeiro fluxo readonly modelo/Core/ferramenta/resultado/continuacao implementado;
+validacao local/gate standard aprovados. WIP integrado unico, sem dependencia de MB236 ou
+nova chamada de conta. Runbook: docs/operations/model-tool-loop-core.md.
+
+Continuidade F02/F05/F11 2026-10-14: dois workers disjuntos e revisao readonly,
+integracao central/WIP1. Deadline durante SQL real/lock e ledger de fixtures
+Docker fixas, cancelamento sticky/binding revalidado/no-replay, sem modelo.
+Focados e4 fisicos passaram; standard novo exit0/9803:9684 passed/119 skipped,
+zero falhas e13 hashes preservados. Primeiro8falhas MCP/harness registrados.
+CLI extra recusada/outro job diagnostico passou, confiabilidade inconclusiva.
+Timeouts iniciais
+documentados, causa nao comprovada. MB236 blocked/estados macro iguais;
+docs/operations/memory-deadline-and-code-fixture-jobs.md.
+
+Continuidade F02/F03/F11 2026-10-13: workers disjuntos/revisor readonly e
+integracao central. Retencao advisory, comparacao exata e quatro fixtures
+Docker reais aprovados localmente; nenhum modelo ou executor promovido.
+Gate standard Windows exit0/9701 casos:9586 passed/115 skipped/zero falhas;
+15 hashes preservados, fila/WIP1/MB236 blocked iguais. Linux4 fisicos separado.
+Runbook: docs/operations/local-retention-source-comparison-and-code-fixture.md.
+
+Continuidade 2026-10-13: F05 profile readonly e F06 painel manual integrados na
+Web pareada; scope do host, CSRF/fences e zero executor/Core/modelo.259 Python
+integrados/89 Node novos passaram; gate standard Windows exit0/9533 casos,
+9422 passed/111 skipped/zero falhas (marcadores -qq). Dois workers,
+revisor independente e integrador; sem nova frente macro, fila ou promocao.
+MB236 blocked/ultimo MB235; MCP/REA/voz nao ativados. Runbook:
+docs/operations/local-job-activity-web.md. Notas anteriores sao historicas.
+
+Atualizacao 2026-10-12, sondagem limitada autorizada: MB236 permanece blocked.
+Sessao expirada renovada uma vez, mesma conta/modelo/pergunta; unico POST200
+sem CT, TE chunked. Uma leitura diagnostica416/4096 bytes teve prefixo SSE
+aparente nao validado, sem corpo bruto persistido/aceito ou guard relaxado.
+Export readonly: unico turno/final nativa2635/21 eventos, ALLOW/rejected/analysis0.
+Prova browser desta tentativa falhou e nao foi repetida; instancia encerrada.
+Origem exata nao comprovada; nao homologa modelo. F05 atividade readonly,
+F13 piloto MCP/relatorio Core e T03 fixtures/runner Linux validados localmente.
+Standard Windows9303 passed/111 skipped e Linux9185 passed/239 skipped/zero
+falhas. Contagens derivadas dos marcadores -qq; scopes/skips nao promovem produto.
+Ultimo MB integrado MB235/MB236 blocked; pacotes conforme execution-backlog.md.
+Runbook: docs/operations/parallel-wave-readiness-activity-and-linux.md.
+Notas anteriores abaixo sao historicas; estado OAuth atual no runbook.
+
+Estado vigente apos diagnostico de parsing/enquadramento - 2026-10-12:
+MB236 blocked para aceite real; gate standard9111 passed/111 skipped/zero falhas.
+Nova tentativa unica gpt-6-astra: HTTP1.1/200, headers presentes/parser sem
+defeitos detectados, Content-Type ausente/Transfer-Encoding chunked declarados.
+Recusa antes do corpo/SSE; final nativa2635 exata a Memory/export/GET/reload.
+Zero refresh/reenvio/fallback, stores retidos. Nao prova corpo valido nem origem
+da omissao. Proximo recorte: investigar origem da resposta sem declaracao SSE;
+nao relaxar parser e nao reenviar sem novo consentimento. Ultimo validado MB235,
+F01/F06 partial/modelo/qualidade nao aceitos. Detalhes no runbook
+real-oauth-acceptance.md; notas anteriores abaixo sao historicas.
+
+
+Atualizacao apos retomada 2026-10-12: MB236 blocked para aceite real.
+Diagnostico MIME/encoding validado:85 novos/772 focados e standard global
+Windows9103 casos (8992 passed/111 skipped/zero falhas). Login oficial concluido,
+usuario confirmou mesma conta/plan scope=true; novo registro local pois mapping
+antigo ausente, nao comparavel. Sessao nao expirada, zero refresh/import de tokens.
+Uma tentativa unica gpt-6-astra: catalogo/selecao/provider passaram, HTTP200/
+response_media_type_missing/response_encoding_identity, recusa antes de SSE.
+Categorias nao provam corpo valido ou causa do servidor. ALLOW/rejected, final
+nativa2635 exata ao export/GET/reload; sem reenvio/fallback/tools. Stores retidos,
+instancia propria fechada. Proximo recorte candidato: investigar media type
+ausente/vazio com DOR/corpus/gate, sem relaxar parser; nova inferencia novo
+consentimento. Ultimo validado MB235, F01/F06 partial/modelo/qualidade nao aceitos.
+Runbook real-oauth-acceptance.md; notas abaixo sao historicas.
+
 Data: 2026-10-04.
 Baseline de runtime: `MB-217` / `c3524ab`.
 

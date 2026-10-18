@@ -137,8 +137,13 @@ test("mobile CSS keeps full-width primary action and native text wrapping", () =
   assert.doesNotMatch(style, /overflow-(?:y|x)\s*:|max-height\s*:|position\s*:\s*(?:fixed|sticky)|100vh/);
 });
 
-test("layout adds no external assets, content interpretation or voice/action surface", () => {
-  assert.doesNotMatch(markup, /<audio|<iframe|<canvas|type="file"|\son[a-z]+\s*=|javascript:|https?:\/\//);
+test("cinematic layout adds only decorative canvas and explicit local WAV, without capture or authority", () => {
+  assert.doesNotMatch(markup, /<audio|<iframe|\son[a-z]+\s*=|javascript:|https?:\/\//);
+  assert.equal(nodes.filter((node) => node.tag === "canvas").length, 1);
+  assert.equal(byId("live-particle-sphere").attributes["aria-hidden"], "true");
+  assert.deepEqual(nodes.filter((node) => node.attributes.type === "file").map((node) => node.attributes.id), ["live-audio-file"]);
+  assert.match(content(byId("live-audio-help")), /Sem microfone, upload ou armazenamento/);
+  assert.match(content(byId("live-audio-help")), /Não é voz automática nem fala ao vivo do Core/);
   assert.doesNotMatch(style, /@import|url\(/);
   assert.equal(nodes.filter((node) => node.tag === "script").length, 1);
   assert.equal(nodes.find((node) => node.tag === "script").attributes.src, "/live-app.mjs");

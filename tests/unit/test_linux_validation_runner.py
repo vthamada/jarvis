@@ -106,6 +106,87 @@ def test_archive_excludes_runtime_git_environment_and_hidden_files(tmp_path):
     assert (output / "tests" / "test_safe.py").read_text() == "pass"
 
 
+def test_archive_includes_only_exact_linux_validation_dockerfile_and_extracts_it(tmp_path):
+    dockerfile = tmp_path / "tools/linux_validation/Dockerfile"
+    dockerfile.parent.mkdir(parents=True)
+    content = b"FROM synthetic-test-only\n"
+    dockerfile.write_bytes(content)
+    data = source_archive(tmp_path)
+    with tarfile.open(fileobj=io.BytesIO(data)) as archive:
+        assert archive.getnames() == ["tools/linux_validation/Dockerfile"]
+        with archive.extractfile("tools/linux_validation/Dockerfile") as archived:
+            assert archived.read() == content
+    output = tmp_path / "output"
+    output.mkdir()
+    extract_sources(io.BytesIO(data), output)
+    assert (output / "tools/linux_validation/Dockerfile").read_bytes() == content
+
+
+@pytest.mark.parametrize("name", [
+    "tools/linux_validation/private-extensionless",
+    "tools/other/Dockerfile",
+    "apps/Dockerfile",
+    "tools/linux_validation/.Dockerfile",
+    "tools/linux_validation/.env",
+    "tools/linux_validation/credentials-private.json",
+])
+def test_exact_dockerfile_allowlist_does_not_admit_neighbor_or_sensitive_files(tmp_path, name):
+    source = tmp_path / name
+    source.parent.mkdir(parents=True)
+    source.write_bytes(b"private-marker")
+    data = source_archive(tmp_path)
+    with tarfile.open(fileobj=io.BytesIO(data)) as archive:
+        assert archive.getnames() == []
+    assert b"private-marker" not in data
+
+
+@pytest.mark.parametrize("mode,attributes", [
+    (stat.S_IFLNK | 0o777, 0), (stat.S_IFREG | 0o644, 0x400),
+])
+def test_exact_dockerfile_redirect_is_refused_before_open(tmp_path, monkeypatch, mode, attributes):
+    source = tmp_path / "tools/linux_validation/Dockerfile"
+    source.parent.mkdir(parents=True)
+    source.write_bytes(b"private-marker")
+    original_lstat = Path.lstat
+    original_open = Path.open
+
+    def observed(path, *args, **kwargs):
+        if path == source:
+            return SimpleNamespace(st_mode=mode, st_file_attributes=attributes)
+        return original_lstat(path, *args, **kwargs)
+
+    def must_not_open(path, *args, **kwargs):
+        if path == source:
+            pytest.fail("redirected Dockerfile opened")
+        return original_open(path, *args, **kwargs)
+
+    with pytest.raises(ValueError, match="redirected_source_path"):
+        with monkeypatch.context() as scoped:
+            scoped.setattr(Path, "lstat", observed)
+            scoped.setattr(Path, "open", must_not_open)
+            source_archive(tmp_path)
+
+
+def test_exact_dockerfile_hardlink_is_refused_before_open(tmp_path, monkeypatch):
+    original = tmp_path / "private-unselected-source"
+    original.write_bytes(b"private-marker")
+    source = tmp_path / "tools/linux_validation/Dockerfile"
+    source.parent.mkdir(parents=True)
+    source.hardlink_to(original)
+    assert source.stat().st_nlink == 2
+    original_open = Path.open
+
+    def must_not_open(path, *args, **kwargs):
+        if path == source:
+            pytest.fail("hardlinked Dockerfile opened")
+        return original_open(path, *args, **kwargs)
+
+    with pytest.raises(ValueError, match="invalid_source_file"):
+        with monkeypatch.context() as scoped:
+            scoped.setattr(Path, "open", must_not_open)
+            source_archive(tmp_path)
+
+
 @pytest.mark.parametrize(
     "name,kind",
     [

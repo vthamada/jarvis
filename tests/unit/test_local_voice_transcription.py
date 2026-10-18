@@ -74,13 +74,30 @@ def arguments(tmp_path):
     models = tmp_path / "models"
     models.mkdir()
     return dict(
-        authorized=True, source=source, model_dir=models, python_executable=Path(sys.executable)
+        authorized=True, source=source, model_dir=models,
+        python_executable=Path(sys.executable).resolve(strict=True),
     )
 
 
 def test_authorization_is_required_before_audio_read(arguments):
     arguments.update(authorized=False, source=Path("does-not-exist.wav"))
     with pytest.raises(ValueError, match="authorization_required"):
+        transcribe.transcribe_local_wav(**arguments)
+
+
+def test_symbolic_interpreter_is_refused_before_worker_start(arguments, tmp_path, monkeypatch):
+    alias = tmp_path / "python-alias"
+    try:
+        alias.symlink_to(arguments["python_executable"])
+    except OSError:
+        pytest.skip("Creating a test symlink is not supported by this host")
+    arguments["python_executable"] = alias
+
+    def forbidden(*args, **kwargs):
+        pytest.fail("a redirected interpreter must not launch a worker")
+
+    monkeypatch.setattr(transcribe.subprocess, "Popen", forbidden)
+    with pytest.raises(ValueError, match="^redirected_path_denied$"):
         transcribe.transcribe_local_wav(**arguments)
 
 

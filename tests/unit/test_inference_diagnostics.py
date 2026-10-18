@@ -237,6 +237,10 @@ def test_success_observes_clean_eof_without_promoting_authority_or_live_evidence
     assert len(calls) == 1 and response.reads == 2 and response.closed and connection.closed
     assert [(r["phase"], r["status"]) for r in records] == [
         ("responses_request", "completed"), ("responses_http", "observed"),
+        ("responses_media_type", "observed"), ("responses_content_encoding", "observed"),
+        ("responses_http_version", "observed"), ("responses_header_count", "observed"),
+        ("responses_header_parse", "observed"), ("responses_media_presence", "observed"),
+        ("responses_content_length", "observed"), ("responses_transfer_encoding", "observed"),
         ("responses_stream", "completed"), ("provider_result", "completed")]
     assert session.metadata()["operator_authenticated"] is False
     assert_records(records)

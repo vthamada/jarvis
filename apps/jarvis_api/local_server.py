@@ -24,12 +24,21 @@ ASSETS = {
     "/": ("live-index.html", "text/html; charset=utf-8"),
     "/live-app.mjs": ("live-app.mjs", "text/javascript; charset=utf-8"),
     "/live-controller.mjs": ("live-controller.mjs", "text/javascript; charset=utf-8"),
+    "/live-job-activity.mjs": ("live-job-activity.mjs", "text/javascript; charset=utf-8"),
     "/live-generative-projection.mjs": (
         "live-generative-projection.mjs", "text/javascript; charset=utf-8"
     ),
     "/live-style.css": ("live-style.css", "text/css; charset=utf-8"),
     "/styles.css": ("styles.css", "text/css; charset=utf-8"),
     "/particle-sphere.mjs": ("particle-sphere.mjs", "text/javascript; charset=utf-8"),
+    "/cinematic.css": ("cinematic.css", "text/css; charset=utf-8"),
+    "/live-presence.mjs": ("live-presence.mjs", "text/javascript; charset=utf-8"),
+    "/local-voice-playback.mjs": ("local-voice-playback.mjs", "text/javascript; charset=utf-8"),
+    "/microphone-capture.mjs": ("microphone-capture.mjs", "text/javascript; charset=utf-8"),
+    "/live-conversation-voice.mjs": (
+        "live-conversation-voice.mjs", "text/javascript; charset=utf-8"
+    ),
+    "/live-voice-controls.mjs": ("live-voice-controls.mjs", "text/javascript; charset=utf-8"),
 }
 CSP = (
     "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; "
@@ -52,6 +61,15 @@ _ERROR_STATUS = {
     "analysis_ticket_refused": 403,
     "analysis_closed": 503,
     "generative_unavailable": 409,
+    "job_activity_disabled": 409,
+    "job_activity_unavailable": 503,
+    "voice_disabled": 409,
+    "voice_busy": 409,
+    "voice_invalid": 400,
+    "voice_unavailable": 503,
+    "voice_cancelled": 409,
+    "voice_expired": 409,
+    "voice_ticket_refused": 403,
 }
 
 
@@ -69,9 +87,21 @@ class LocalWebServer(ThreadingHTTPServer):
     block_on_close = False
     request_queue_size = MAX_REQUEST_THREADS
 
-    def __init__(self, service: object, port: int, auth: LocalAuth):
+    def __init__(self, service: object, port: int, auth: LocalAuth, job_activity_profile=None,
+                 voice_profile=None, voice_service=None):
+        if job_activity_profile is not None:
+            from .job_activity_profile import JobActivityProfile
+
+            if type(job_activity_profile) is not JobActivityProfile:
+                raise ValueError("invalid_job_activity_profile")
+        self.job_activity_profile = job_activity_profile
         self.auth = auth
         self.analysis_service = service
+        from .voice_service import LocalVoiceService
+
+        if voice_service is not None and type(voice_service) is not LocalVoiceService:
+            raise ValueError("invalid_voice_service")
+        self.voice_service = voice_service or LocalVoiceService(service, voice_profile)
         self._slots = threading.BoundedSemaphore(MAX_REQUEST_THREADS)
         self._requests: set[socket.socket] = set()
         self._requests_lock = threading.Lock()
@@ -131,6 +161,7 @@ class LocalWebServer(ThreadingHTTPServer):
         pass  # Never print request, body, identity or exception payloads.
 
     def server_close(self) -> None:
+        self.voice_service.close()
         self.auth.close()
         with self._requests_lock:
             for request in self._requests:
@@ -185,7 +216,9 @@ class LocalWebHandler(BaseHTTPRequestHandler):
             ("X-Content-Type-Options", "nosniff"),
             ("Referrer-Policy", "no-referrer"),
             ("Cache-Control", "no-store"),
-            ("Permissions-Policy", "camera=(), microphone=(), geolocation=()"),
+            ("Permissions-Policy", "camera=(), microphone=" + (
+                "(self)" if self.server.voice_service.config()["asr_enabled"] else "()"
+            ) + ", geolocation=()"),
             ("Connection", "close"),
         ):
             self.send_header(key, value)
@@ -328,6 +361,24 @@ class LocalWebHandler(BaseHTTPRequestHandler):
             raise LocalWebRejected("session_refused")
         return tokens[0]
 
+    def _voice_body(self) -> bytes:
+        from .voice_service import MAX_CAPTURE_BYTES
+
+        if (self.headers.get("Content-Type") != "audio/wav"
+                or self.headers.get("X-Jarvis-Voice-Consent") != "local-audio-v1"):
+            raise LocalWebRejected("voice_invalid")
+        length = self.headers.get("Content-Length", "")
+        if not re.fullmatch(r"[1-9][0-9]{0,8}", length, re.ASCII):
+            raise LocalWebRejected("voice_invalid")
+        if int(length) > MAX_CAPTURE_BYTES:
+            raise LocalWebRejected("request_too_large")
+        raw = self.rfile.read(int(length))
+        self._body_read = True
+        self._deadline.cancel()
+        if len(raw) != int(length):
+            raise LocalWebRejected("voice_invalid")
+        return raw
+
     def _identity(self, *, csrf: bool):
         token = self._token()
         if csrf:
@@ -358,7 +409,28 @@ class LocalWebHandler(BaseHTTPRequestHandler):
                     )
                     return
                 token, identity = self._identity(csrf=True)
-                if self.path == "/api/tickets":
+                if self.path == "/api/voice/transcriptions":
+                    if not self.server.voice_service.config()["asr_enabled"]:
+                        raise LocalWebRejected("voice_disabled")
+                    raw = self._voice_body()
+                    self._fence(token, identity)
+                    result = self.server.voice_service.start_transcription(
+                        identity, raw, consent=True,
+                    )
+                    self._json(202, result, fence=(token, identity, True))
+                elif self.path == "/api/voice/speech":
+                    body = self._body({"ticket", "consent"})
+                    self._fence(token, identity)
+                    result = self.server.voice_service.start_speech(
+                        identity, body["ticket"], consent=body["consent"],
+                    )
+                    self._json(202, result, fence=(token, identity, True))
+                elif self.path == "/api/voice/cancel":
+                    body = self._body({"job_id"})
+                    self._fence(token, identity)
+                    result = self.server.voice_service.cancel(identity, body["job_id"])
+                    self._json(200, result, fence=(token, identity, True))
+                elif self.path == "/api/tickets":
                     self._body(set())
                     self._fence(token, identity)
                     result = service.issue_ticket(identity)
@@ -403,6 +475,7 @@ class LocalWebHandler(BaseHTTPRequestHandler):
                 elif self.path == "/api/disconnect":
                     self._body(set())
                     self._fence(token, identity)
+                    self.server.voice_service.revoke(identity)
                     auth.revoke(token)
                     service.revoke(identity)
                     self._json(
@@ -421,6 +494,24 @@ class LocalWebHandler(BaseHTTPRequestHandler):
                     auth.session_payload(token, service.current_ticket(identity)),
                     fence=(token, identity, False),
                 )
+            elif self.path == "/api/voice/config":
+                token, identity = self._identity(csrf=True)
+                self._json(200, self.server.voice_service.config(), fence=(token, identity, True))
+            elif self.path.startswith(("/api/voice/jobs/", "/api/voice/audio/")):
+                from .voice_service import JOB_PATTERN
+
+                token, identity = self._identity(csrf=True)
+                self._fence(token, identity)
+                job_id = self.path.split("/", 4)[-1]
+                if not JOB_PATTERN.fullmatch(job_id):
+                    raise LocalWebRejected("voice_ticket_refused")
+                if self.path.startswith("/api/voice/audio/"):
+                    audio = self.server.voice_service.audio(identity, job_id)
+                    self._fence(token, identity)
+                    self._reply(200, audio, "audio/wav")
+                else:
+                    result = self.server.voice_service.get(identity, job_id)
+                    self._json(200, result, fence=(token, identity, True))
             elif self.path.startswith("/api/results/"):
                 ticket = self.path.removeprefix("/api/results/")
                 if not TICKET_PATTERN.fullmatch(ticket):
@@ -428,6 +519,25 @@ class LocalWebHandler(BaseHTTPRequestHandler):
                 token, identity = self._identity(csrf=True)
                 result = service.get_result(identity, ticket)
                 self._json(200, result, fence=(token, identity, True))
+            elif self.path == "/api/job-activity":
+                token, identity = self._identity(csrf=True)
+                profile = self.server.job_activity_profile
+                if profile is None:
+                    raise LocalWebRejected("job_activity_disabled")
+                from .job_activity_profile import JobActivityUnavailable
+
+                self._fence(token, identity)
+                try:
+                    activity = profile.read()
+                except JobActivityUnavailable:
+                    raise LocalWebRejected("job_activity_unavailable") from None
+                # A paired browser can view only the host-selected summary.
+                # Ledger scope is not the browser principal or a Core grant.
+                self._json(200, {
+                    "schema_version": "jarvis-local-job-activity-v1",
+                    "session_ref": identity.session_ref,
+                    "activity": activity,
+                }, fence=(token, identity, True))
             elif self.path in ASSETS:
                 filename, content_type = ASSETS[self.path]
                 asset = ASSET_ROOT / filename
@@ -478,8 +588,11 @@ class LocalWebHandler(BaseHTTPRequestHandler):
 
 
 def create_server(
-    service: object, port: int = 0, *, auth: LocalAuth | None = None
+    service: object, port: int = 0, *, auth: LocalAuth | None = None,
+    job_activity_profile=None,
+    voice_profile=None, voice_service=None,
 ) -> LocalWebServer:
     if type(port) is not int or not 0 <= port <= 65535:
         raise ValueError("invalid_port")
-    return LocalWebServer(service, port, auth if auth is not None else LocalAuth())
+    return LocalWebServer(service, port, auth if auth is not None else LocalAuth(),
+                          job_activity_profile, voice_profile, voice_service)

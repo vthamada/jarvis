@@ -501,6 +501,39 @@ def test_foreign_pending_replacement_is_not_removed_during_cleanup(tmp_path, par
     assert not (tmp_path / "final.wav").exists()
 
 
+@pytest.mark.skipif(os.name != "posix", reason="POSIX unlinked-inode lifetime contract")
+def test_pending_inode_is_pinned_until_foreign_replacement_cleanup(tmp_path, parts, monkeypatch):
+    anchors, foreign = [], []
+    duplicate = os.dup
+
+    def retain(descriptor):
+        anchor = duplicate(descriptor)
+        anchors.append(anchor)
+        return anchor
+
+    def swap_before_link(path, destination):
+        original = path.stat()
+        assert len(anchors) == 1
+        path.unlink()
+        retained = os.fstat(anchors[0])
+        assert retained.st_nlink == 0
+        assert (retained.st_dev, retained.st_ino) == (original.st_dev, original.st_ino)
+        path.write_bytes(b"foreign-private-pending")
+        replacement = path.stat()
+        assert (replacement.st_dev, replacement.st_ino) != (original.st_dev, original.st_ino)
+        foreign.append(path)
+        raise OSError("synthetic publication failure")
+
+    monkeypatch.setattr(os, "dup", retain)
+    monkeypatch.setattr(os, "link", swap_before_link)
+    with pytest.raises(ValueError, match="^audio_assembly_failed$"):
+        assemble(parts, tmp_path / "final.wav")
+    assert foreign[0].read_bytes() == b"foreign-private-pending"
+    assert not (tmp_path / "final.wav").exists()
+    with pytest.raises(OSError):
+        os.fstat(anchors[0])  # The retained descriptor is released after cleanup.
+
+
 @pytest.mark.parametrize("value", [None, math.nan, math.inf, True, "PRIVATE"])
 def test_bad_clock_values_are_fixed_errors_without_io(tmp_path, value):
     with pytest.raises(ValueError, match="^invalid_audio_clock$"):

@@ -24,7 +24,8 @@ def arguments(tmp_path):
         "reviewed_text": "Pedido privado revisado, sem autorização de ação.",
         "reference_path": tmp_path / "reference.wav",
         "model_dir": tmp_path / "weights",
-        "python_executable": Path(sys.executable),
+        # The lab rejects redirected assets; Linux launchers may be symlinks.
+        "python_executable": Path(sys.executable).resolve(strict=True),
         "engine": "qwen3_tts",
         "workspace_root": workspace,
     }

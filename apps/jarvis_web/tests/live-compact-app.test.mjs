@@ -129,12 +129,13 @@ test("boot paired closes pairing once without stealing untouched document focus"
     assert.equal(focusCalls.length, 0); assert.equal(document.activeElement.id, "body");
   });
 });
-test("explicit pairing moves hidden form focus to enabled composer without scrolling", async () => {
+test("explicit pairing reveals the enabled composer above the technical settings", async () => {
+  assert.ok(markup.indexOf('id="live-settings"') > markup.indexOf('id="live-query"'));
   await withApp([response({ error_code: "session_refused" }, 401), response(session())], async ({ node, document, focusCalls }) => {
     node("live-secret").value = "f".repeat(64); node("live-pair").focus(); await node("live-pair-form").dispatch("submit");
     assert.equal(node("live-secret").value, ""); assert.equal(node("live-pairing-details").open, false);
     assert.equal(document.activeElement.id, "live-query"); assert.equal(node("live-query").disabled, false);
-    assert.deepEqual(focusCalls.at(-1), { id: "live-query", options: { preventScroll: true } });
+    assert.deepEqual(focusCalls.at(-1), { id: "live-query", options: undefined });
   });
 });
 test("manually opened pairing stays open throughout submission/poll/recovery", async () => {

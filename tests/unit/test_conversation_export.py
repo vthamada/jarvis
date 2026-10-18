@@ -7,6 +7,7 @@ import os
 import sqlite3
 import subprocess
 import sys
+from contextlib import ExitStack
 from hashlib import sha256
 from pathlib import Path
 from threading import Event
@@ -22,6 +23,36 @@ RECORD = "synthetic-record"
 QUERY = "Compare documentation and observability pilot reports."
 FINAL = "Final canônica: evidência disponível, limitações preservadas."
 STAMP = "2026-10-06T10:00:04+00:00"
+
+
+def test_readonly_open_without_extension_api_preserves_sql_guards(tmp_path, monkeypatch):
+    database = tmp_path / "readonly.db"
+    with sqlite3.connect(database) as connection:
+        connection.execute("CREATE TABLE selected (value TEXT)")
+        connection.execute("INSERT INTO selected VALUES ('synthetic')")
+        connection.execute("CREATE TABLE unselected (value TEXT)")
+    connect = sqlite3.connect
+
+    class NoExtensionApi(sqlite3.Connection):
+        def __getattribute__(self, name):
+            if name == "enable_load_extension":
+                raise AttributeError(name)
+            return super().__getattribute__(name)
+
+    monkeypatch.setattr(sqlite3, "connect", lambda *args, **kwargs: connect(
+        *args, **kwargs, factory=NoExtensionApi,
+    ))
+    with ExitStack() as stack:
+        connection = export._open(database, stack, lambda: None, "selected")
+        assert connection.execute("SELECT length(value) FROM selected").fetchone()[0] == 9
+        for statement in (
+            "INSERT INTO selected VALUES ('forbidden')", "SELECT * FROM unselected",
+            "SELECT load_extension('never_loaded')", "ATTACH DATABASE ':memory:' AS forbidden",
+        ):
+            with pytest.raises(sqlite3.DatabaseError):
+                connection.execute(statement)
+    with pytest.raises(sqlite3.ProgrammingError):
+        connection.execute("SELECT 1")
 
 
 def digest(value):

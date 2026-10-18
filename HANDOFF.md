@@ -1,5 +1,461 @@
 # HANDOFF
 
+## PR#2: revisao SQLite e telemetria - 2026-10-18
+
+CI do head021e10e aprovado:11213 passed/195 skipped/zero falhas, run39163449556.
+Essa prova e anterior aos corretivos de revisao abaixo, nao aceite do novo head.
+Tres threads triadas: IPv6 mapped ja corrigido em021e10e; SQLite sem API opcional
+e telemetria pos-callback confirmados reais. Dez regressoes demonstraram RED,
+depois10 passed/2.15s. Bateria integrada Windows554 passed/221.54s/zero skips:
+recibo/retomada duravel, exportacao Core, provider/HTTP/CLI e guardas de publicacao.
+_open so chama enable_load_extension quando a API existe; mode=ro/query_only/
+authorizer continuam bloqueando escrita, tabelas alheias, ATTACH e load_extension.
+Teste real de Core/SQLite prova conclusao e resume sem outra chamada ao Core
+com Connection sem essa API. Nao e execucao fisica Python3.14.
+Observer que revoga publicacao recebe, no maximo, uma correcao terminal
+inference_finished com supersedes_previous/previous_status; contadores devem
+compensar o status anterior, nao somar duas tentativas. Formato normal preservado,
+correcao sem texto/query/path, callback best-effort, sem retry do modelo.
+Ruff/diffcheck passaram; resultado completo do head seguinte deve ser conferido
+nos checks do PR antes de merge. Nenhuma promocao de capability/conta/voz real.
+
+## PR#2: corretivos comprovados pelo CI Linux - 2026-10-18
+
+Implementacoes publicadas em5c4e8ae, PR https://github.com/vthamada/jarvis/pull/2.
+Primeiro gate Linux completo:11198 passed/195 skipped/11 failed, exit1;
+run39162142329. Nove falhas eram fixtures usando o symlink sys.executable:
+fixtures agora resolvem somente o interpreter confiado do teste, sem relaxar
+as guardas de paths do runtime. Novo teste exige recusa de interpreter symlink.
+Duas falhas de runtime corrigidas: IPv6 mapped explicitamente recusado mesmo
+quando ipaddress muda classificacao/renderizacao; arquivo pending POSIX mantem
+descriptor proprio aberto ate cleanup para impedir reuso imediato de inode.
+Teste determinista mapped demonstrou RED (1 failed/1 passed) antes da correcao;
+caso original de substituicao falhou no CI e novo teste POSIX atesta inode/fd.
+Bateria Windows afetada512 passed/2 skipped/44.75s; skips de contrato POSIX e
+criacao de symlink sem privilegio no host. Nao e aceite Linux nem ML/microfone.
+Regressao vizinha TTS/Core/Web:264 passed/146.50s. Quick, Ruff e diffcheck passaram.
+Docker Linux indisponivel no pipe consultado;
+nenhum daemon iniciado, imagem baixada ou configuracao alterada. Corretivos
+exigem novo gate completo no CI antes do merge, sem bypass ou force push;
+os checks do PR registram o resultado remoto posterior a esta verificacao local.
+Falha inicial Windows de recuperacao duravel abaixo continua nao reproduzida;
+nenhum corretivo aqui e apresentado como sua causa ou solucao.
+
+## Preparacao da publicacao solicitada - 2026-10-18
+
+Operador autorizou publicar as implementacoes pendentes e integrar na main.
+Conjunto local:167 arquivos, branch codex/publish-harness-voice-local-2026-10-18,
+base250b128; nenhuma credencial, audio privado, modelo ou runtime ignorado incluido.
+Diffcheck e busca de padroes comuns de segredos/conflitos sem ocorrencias.
+Primeiro standard de publicacao observou uma falha na posicao430 e foi
+interrompido sem traceback/XML final. Coleta oficial11404 identificou o caso
+durable crash after core commit[True]; as duas variantes passaram isoladas
+(2 passed/30.81s). Web isolada65 passed/29.29s, incluindo a bateria Node.
+Nova execucao standard diagnostica passou estaticos e as duas variantes no
+fluxo integrado, mas a sessao do executor desapareceu em~5%, sem veredito;
+consulta posterior nao encontrou os processos do gate/pytest em execucao.
+Causa da primeira falha nao reproduzida; nao declarar correcao ou flakiness
+comprovada. Nenhuma mudanca de runtime/testes feita para contornar essa falha.
+Este e o registro pre-publicacao: gate completo Windows permanece parcial;
+CI Linux do PR executa o mesmo standard e deve concluir antes do merge.
+Resultado remoto deve ser conferido nos checks do PR; publicacao nao homologa
+voz fluida/modelo real/MB236 nem promove capacidades experimentais.
+PR documental#1 preservado separadamente. Detalhes no runbook da continuidade.
+
+## Ollama instalado no host - 2026-10-18
+
+Operador informou nao ter servidor local, pediu recomendacao e autorizou
+instalar Ollama. Instalado0.40.5 via winget/source winget/scope user, installer
+oficial GitHub com hash conferido pelo gerenciador; sem modelo/login/inferencia.
+Binario: C:\Users\vtham\AppData\Local\Programs\Ollama\ollama.exe.
+OLLAMA_HOST=127.0.0.1:11434 e OLLAMA_NO_CLOUD=1 persistidos no usuario;
+cloud desativada confirmada no log, listener so127.0.0.1 e APIs de metadados
+confirmaram versao0.40.5/zero modelos instalados/zero carregados.
+Driver572.70/RTX3050Laptop4096MiB consultados, sem alterar driver.
+Nao conecta automaticamente JARVIS/Web nem homologa modelo/latencia.
+Standard da continuidade abaixo interrompido intencionalmente em~25% para
+priorizar esta instalacao, com RAM livre~388MiB; processos do gate confirmados
+encerrados, log retido, sem veredito/aprovacao. Bateria integrada475 passou
+antes; standard completo continua pendente, WIP1/MB236 intactos. Runbook:
+docs/operations/local-model-cli-and-asr-lifecycle-2026-10-18.md.
+Quick/diffcheck pos-registro passaram;138 hashes de codigo/testes/config
+preservados, sem arquivos removidos. Sem commit/push/merge.
+
+## CLI local, HTTP chunked e ciclo de vida ASR - 2026-10-18
+
+Continuidade do mesmo WIP1, implementacao em validacao; gate standard desta
+rodada ainda pendente. Tres workers com ownership disjunto, root unico executor.
+ASR Windows opt-in com handshake pre-SDK e handle real atestado; Web habilita
+guard, preserva captura/runtime e quarentena em saida incerta. Cleanup so do
+diretorio proprio inalterado apos saida confirmada. Linux/default lab intactos;
+TTS nao usa o novo guard. HTTP JSON chunked limitado implementado, sem SSE nem
+partial, mantendo CL/peerclose/deadline/cancel. CLI local explicita com modelo,
+endpoint numerico loopback, relatorios selecionados e acknowledgement de
+possivel egress cloud; mesmo fluxo soberano Core/ferramenta/sintese/memoria.
+Sem selecionar por Web, falsear conta SIWC ou promover modelo/pesos locais.
+`live` significa sockets, nao pesos reais. Primeira coleta bloqueou por basename
+duplicado, renomeado; primeiro lote voz/HTTP270 passou/1falhou em linger/venv.
+Janela exited->terminate tratada so com novo wait no mesmo handle. Bateria
+fresca lifecycle/captura53 passou, incluindo Windowsbase/venv stdlib real.
+CLI recusava por atributo de provider nao exposto (corrigido no wrapper);
+fixture subprocess precisava catalogo curado absoluto com cwd/DB isolados.
+Nova bateria integrada fresca475 passou/142,46s; quick e diffcheck passaram.
+138 hashes congelados; standard interrompido para a instalacao autorizada
+acima continua pendente. Nao usar gate historico
+abaixo como aceite desta continuidade.
+Na bateria de codigo nao houve ML/GPU, dispositivo fisico, download de pesos,
+voz externa, conta/OAuth ou
+commit/push/merge. Perfil privado e MB236 intactos. Runbook:
+docs/operations/local-model-cli-and-asr-lifecycle-2026-10-18.md.
+
+## Latencia de voz e adapter local - 2026-10-18
+
+Recorte de codigo verificado; aceite funcional de conversa segue parcial.
+Standard Windows exit0:11035 passed/122 skipped/zero falhas/errors;
+129 hashes de codigo/testes/configuracao preservados. Tres frentes paralelas
+com ownership disjunto; coordenador unico dos testes/processos/modelos.
+Diagnostico TTS privado opt-in limita fases/bytes sem mudar stdout/resultado;
+reuso de condicionamento Qwen apenas em RAM/mesmo lote, defaultoff e SDK
+incompativel recusa. ASR quality/beam5 preservado; conversation/beam1 opcional
+no perfil privado/CLI, sem autossubmit nem ganho real homologado. Adapter textual
+ChatCompletions e HTTP loopback sem proxy/DNS/auth/retry prontos em isolamento;
+HTTP/Core/ferramenta/sintese/SQLite provados com motor scripted, nao modelo real.
+Ainda nao selecionavel na Web/CLI de produto; SIWC/MB236 intactos.
+Revisao por fonte Ollama/Go mostrou possivelchunkedlegitimo nonstream recusado
+pelo contrato inicial CL+peerclose: proximo slice e decoder HTTPchunked bounded,
+nao streaming/SSE. Nao anunciar Ollama plug-and-play a partir de fixtures.
+Bateria integrada658 passed/1 skipped; Ruff achou dois imports fora de ordem,
+corrigidos antes do gate. Qwen real curto29chars:2,08s WAV em44,14s totais;
+worker imports25,437s/model_load6,422s/generate10,344s. Nao isola o timeout
+historico da final longa nem aprova qualidade vocal. Duas tentativas ASR pararam
+na primeira condicao quality (~90s) com WinError32 no cleanup de temporarios;
+sem comparacao beam1 valida. Prova opt-in Qwen120,03s/timeout sem partes:
+imports89,281s/load16s/condicionamento4,625s; API aceitou, WAV nao concluiu,
+sem ganho demonstrado/retry. Repro stdlib unica confirmou launcher morto/worker
+ainda vivo e unlinkWinError32; worker saiu16ms depois sem termino extra. Nao
+prova causa exata do ASR; contencao deterministica fica proximo slice. JS1282
+passaram; quick e standard completos passaram. Microfone
+fisico nao acionado; sem upload/conta/OAuth/install/download/commit/push/merge.
+Estudo: docs/operations/fluid-conversation-options-2026-10-18.md.
+Evidencias/limites: docs/operations/voice-latency-diagnostics-2026-10-18.md.
+Previa restaurada em http://127.0.0.1:55203/ (novo runtime isolado), nao pareada,
+generativo off/perfil de voz antigo inalterado. IAB/CUA-Playwright624x668:
+DOM significativo/sem overlay, console sem erros/avisos, secao WAV abre/fecha;
+sem arquivo, mic, audio, pareamento automatico ou novo pedido ao Core.
+WIP1 funcional mantido; nenhuma promocao de conversa fluida ou macrostatus.
+
+## Conversa Web por voz local e pesquisa de motores - 2026-10-17
+
+Ponte experimental integrada/verificada; WIP1 funcional mantido: microfone
+explicito -> Whisper local -> revisao separada ->
+compositor/Enviar existente; fala opt-in de novos tickets allow/Core final exata
+via loteQwen/Chatterbox existente e RMS real na esfera. Semcloud STT/OS fallback,
+autossubmit, speakeridentity, nova autoridade ou renovacao OAuth. Hostperfil
+explicito, defaultoff,mesmoOrigin/CSRF, limites e cancel/fences/auditoria local.
+Servico135/perfil95/regressaoHTTP/Core/Web256 e JS1282 passaram (sobreposicoes);
+TTSreal unico atingiu300s/voice_timeout sem parte concluida/reproducao; final
+preservada, semretry/fallback. Probe deimportssemmodelo confirmou SDK em14,66s;
+gargalo carga/geracao nao isolado. Nao e conversa fluida homologada. Microfone
+fisico nao acionado; ASRreal separado concluiu10s/160charsdraft em27,81s,
+semcloud/Core/confirmacao. Primeiro standard revelou5 falhas no cleanup opcional
+do startup: servidor minimo legado nao expunha voice_service. Extensao agora
+opcional, testes antigos intactos;68 testes de startup/regressao passaram.
+Standard final Windows aprovado exit0:10704 passed/121 skipped/zero falhas;
+25 hashes de codigo/testes preservados. Bateria integrada pos-correcao422 passou;
+JS1282 passou. Browser desktop1280/mobile390 sem overflow/erro de console;
+Core/SQLite real + tomfixture comprovou autoplay, esfera0/0,517 e stop0, sem
+replay ao recuperar ticket. Isso nao e fala Qwen real nem microfone fisico.
+Pendente para fechar conversa utilizavel: diagnostico carga/geracao TTS,
+latencia ASR, prova fisica do mic e aceite vocal. Sem escuta continua/duplex.
+Pesquisas paralelas concluidas: OpenRouter/Groq/Ollama/OmniRoute e alternativas;
+VoiceStudio/GGUF candidato nao instalado nem qualidade vocal homologada.
+Runbook: docs/operations/local-web-voice-conversation.md. MB236/macro intactos.
+Sem commit/push/merge. Historico visual abaixo nao e aceite deste novo recorte.
+
+## Presenca cinematografica Web - 2026-10-17
+
+Recorte visual solicitado/aprovado pelo operador concluido no escopo local: esfera
+Canvas2D volumetrica azul/ciano, quatro paineis holograficos e compositor na base,
+em fixture offline e Web pareada. Reusa player WAV/RMS real; nao e captura/STT
+ou voz automatica do Core. Governanca, consentimento por pergunta, tickets e
+final canonica integral intactos. Sem assets remotos/dependencias/CSP relaxada.
+1186 testes JS e82 Python Web/atividade passaram no host; browser confirmou
+silencio0/som0,179 e stop0, com foco WAV visivel mobile390 sem overflow.
+Gate da primeira revisao passou exit0:10415 aprovados/121 ignorados,15 hashes
+preservados. Operador reapresentou conceito e pediu fidelidade visual direta;
+revisao de composicao/brilho integrada, sem usar esse gate como seu aceite.
+Marca central, quatro paineis angulares, esfera mais luminosa e piso perspectivo;
+configuracao abaixo da conversa. Browser: Core nativo/final integral, sem modelo;
+320/390/1280 sem overflow, dock live integral em1280x800/1672x940. Pareamento e
+WAV revelam campo focado visivel. Gate standard desta revisao passou exit0:
+10418 aprovados/121 ignorados, zero falhas/errors e16 hashes preservados.
+Recorte visual fechado; captura/STT/TTS automatico e integracao de agenda pendentes.
+Runbook: docs/operations/cinematic-presence-web.md. Sem commit/push/merge.
+
+## Campanha de missoes F01/F04 - 2026-10-17
+
+Implementado protocolo opt-in com25 missoes publicas sinteticas (16dev/9probe),
+grader independente, comparacao pareada e CLI/Core isolado com readback exato.
+V1 intacto; nenhum produto reparado, recibo de efeito inventado ou Hermes fake.
+Baseline nativo:38despachos/36turnos/zero produtos aceitos,12unsupported no
+denominador50; referencia ausente50naoexecutados. Gargalo observado no adapter/
+roteamento lexical de brief+binding+fontes, nao prova de incapacidade geral.
+Piloto OAuth gpt-6.1-sol autorizado ate10: uma tentativa de inferencia, zero
+concluidas; catalogo recusou siwc_credential_expired. Parou sem refresh/retry/
+fallback; nenhuma nova prova sobre o Content-Type do MB236. Tokens/custo unknown.
+272 testes focados passaram apos REDs de interrupcao e cancel/prazo antes do
+Core;38clarificacoes observadas/36decisoes nativas requeridas. Primeiro gate
+interrompido para incluir correcoes, nao aceite; standard final Windows exit0:
+10403 passed/121 skipped,10524 casos/zero falhas/errors em1717.77s;15 hashes
+preservados. Recorte local fechado, campanha util/modelo real nao homologados. Runbook:
+docs/operations/harness-mission-campaign.md. WIP1/estados macro/MB236 blocked
+mantidos; sem commit/push/merge. Renovacao e nova tentativa exigem autorizacao.
+
+## Retomada duravel nativa F05 - 2026-10-17
+
+Recorte local concluido: input privado opt-in no jobs.db existente, runner
+assist-only/Core nativo e recuperacao por recibo canonico sem nova chamada.
+Prepared pode transferir claim expirado; started incerto nunca e reexecutado.
+Cancelamento/pausa sticky, binding/CAS/fencing e reserva global Core intactos.
+Tres workers disjuntos; integrador runner/CLI/verificacao. Regressao final612
+passed/6 skipped/zero falhas; smoke CLI em tres processos recuperou final sem
+Core e com uma tentativa. Standard Windows exit0:10131 passed/121 skipped,
+10252 casos/zero falhas/errors em965.62s;12 hashes preservados.
+Primeira integrada140/10 e regressao559/6/4fail/40errors sao historicas: fixture
+de especialista, sandbox Windows e bug lease fracionaria comprovados/tratados.
+REDs de busy/input/preflight tambem corrigidos; detalhes preservados no runbook.
+Sem modelo/ferramenta externa/scheduler, promocao macro ou commit/push/merge.
+F05 foundation/MB236 blocked/ultimo MB235 mantidos. Inicio16/fechamento17.
+Runbook: docs/operations/durable-native-task-resume.md. Notas abaixo historicas.
+
+## Loop modelo/Core/ferramenta F01/F03 - 2026-10-16
+
+Slice nativo opt-in implementado: proposta JSON do modelo, politica de leitura
+por chamada/recurso/fingerprint no Core, reader real de ate 3 relatorios UTF8
+selecionados pelo host e continuacao com observacoes/citacoes exatas. Sintese
+nativa/memoria canonica soberanas; anexo nao confiavel fora de Planning.
+Budgets/cancel/drift/binding por rodada e falhas sem parciais; default desligado.
+CLI exige consentimento query+reports, perfil escolhido lazy e nao login/refresh.
+Tres workers disjuntos (loop, reader, E2E/policy), integrador Core/Synthesis/CLI.
+Validacao local concluida: 287 focados/3 skips; 428 regressao ampliada/3 skips.
+Gate standard Windows exit 0: 9972 passed, 121 skipped, zero falhas/errors;
+10093 casos no XML e 12 hashes de runtime/testes preservados. Primeiro gate
+completo teve 13 falhas de compatibilidade na sintese, corrigidas por acesso
+opcional/default None sem editar os testes legados; historico no runbook.
+MB236 blocked/ultimo MB235 mantidos; zero conta, modelo externo, publicacao,
+executor geral ou retomada duravel promovida. Sem commit/push/merge.
+Runbook: docs/operations/model-tool-loop-core.md.
+
+## Continuidade F02/F05/F11 - 2026-10-14
+
+Prazo unico opt-in da revisao de retencao agora cobre SQLite VM/lock e fecha
+conexoes em falha; default recall/export preservado, nenhuma escrita canonica.
+Jobs opt-in ligam quatro fixtures Docker fixas ao ledger existente, CAS/fencing,
+binding revalidado, cancelamento sticky e uma tentativa sem replay no restart.
+Estado terminal nao persiste prova fisica nem concede grant. Piloto CLI usa
+somente ledger temporario proprio; Core/API/Web e scheduler nao ativados.
+Dois workers disjuntos/revisor readonly/root integrador. REDs comprovados;
+Code305 focados e121 apos hardening; memoria serial fresca51 passaram.
+Primeira bateria memoria teve dois subprocess timeouts20s (291 passed/1 skip);
+isolados e serial passaram sem alterar budgets; causa inicial nao comprovada,
+nao ocultar como resolvida/preexistente. Prova Docker4 passou/cleanup e restart
+confirmados. Primeiro standard9801 teve8 MCP failed; repro controlado de
+entry expiry demonstrou falsa expectativa de drift anteshandle, nao causa
+original capturada. Harness apenas2testes +2expiracoes reais,176 focados
+passaram. Novo standard exit0/9803 casos:9684 passed/119 skipped/zero falhas;
+13 hashes preservados. CLI extra needs_decision; outro job diagnostico passou,
+sem correcao/causa original comprovada. Confiabilidade CLI ainda inconclusiva,
+nao homologada por repeticao. MB236 blocked,
+ultimo MB235/F02 partial/F05-F11 foundation mantidos. Sem conta/modelo,
+commit/push/merge. Detalhes e proximos aceites:
+docs/operations/memory-deadline-and-code-fixture-jobs.md.
+
+## Continuidade F02/F03/F11 - 2026-10-13
+
+Plano de revisao de retencao readonly e comparacao de trechos locais entregues
+com CLIs opt-in. Labels nao autenticam operador, hashes nao anonimizam,
+texto igual/diferente nao comprova verdade. Nenhuma escrita em memoria/fonte.
+120 testes integrados +1 extra de historico antigo misto e43 unitarios do
+runner passaram. Docker Linux real:4 cenarios passaram, cleanup confirmado;
+baseline3 falhas esperadas/candidato3 acertos/isolamento5 checks/timeout real.
+Nao executor generico, geracao ou aplicacao de patch. Revisao independente
+corrigiu interrupcoes/evidencia de timeout; template Docker ajustado por causa
+comprovada (Volumes opcional ausente). Primeiras recusas fisicas nao sao aceite.
+Primeiro standard9701 casos exit1:9583 passed/115 skipped/3 failed/zero errors.
+Dois positivos MCP expiraram na entrada; somente teste usa callerbudget10s.
+Drift negative sem reason capturado/isolo passou; harness separa clock da
+entrada e exige mutacao efetiva antes da recusa. Runtime/cliente/asyncio/UTC/
+expiry guards intactos;174 focados passaram apos revisao.15 hashes congelados;
+Reexecucao standard integrada Windows exit0:9701 casos,9586 passed/115 skipped,
+zero failed/errors (marcadores -qq).15 hashes identicos apos gate; skips nao
+validam outra plataforma ou modelo. Linux fisico F11 comprovado separadamente.
+296 consumidores readonly de inventario/MCP passaram apos docs finais; quick
+final e diff-check aprovados. Nenhum teste novo usa conta externa.
+Runbook: docs/operations/local-retention-source-comparison-and-code-fixture.md.
+F02/F03 partial/F11 foundation/MB236 blocked/ultimo MB235 preservados; sem
+conta, modelo, refresh, capability promovida ou commit/push/merge. Notas abaixo
+historicas; trabalho preexistente preservado.
+
+## Continuidade F05/F06 - 2026-10-13
+
+Atividade readonly agora tem profile opt-in e painel manual na Web local
+pareada, com scope fixado no host, CSRF e fence apos leitura. Sem conteudo/refs,
+ticket, Core/modelo, polling, executor ou reconciliacao. Dois workers disjuntos,
+revisor independente e integracao central; corrida de sessao detectada/corrigida.
+259 Python integrados e89 Node novos passaram; contagens sobrepostas. SQLite
+real/HTTP/fetch/modulos DOM preservam ledger e desligamento limpa resumo.
+Browser IAB sintetico validou consulta/verificacao/reload/limpeza ao desconectar,
+zero erros; aba propria fechada. Primeiro standard interrompido antes do final,
+9533 casos coletados; Codex Process Jobs indisponivel em win32 (exit1/sem job).
+Reexecucao pelo terminal oficial concluiu: standard Windows exit0/9533 casos,
+9422 passed/111 skipped, zero failed/errors (coleta/marcadores -qq).13 hashes
+de runtime/corpus preservados apos docs/inventario;329 consumidores readonly
+de inventario/MCP finais passaram/zero skips. Quick final e diff-check aprovados.
+Skips nao validam Linux novo, voz ou modelo; sem fechamento das frentes macro.
+Runbook:
+docs/operations/local-job-activity-web.md. F05 foundation/F06 partial, ultimo
+MB235/MB236 blocked. Nenhuma inferencia/refresh/MCP terceiro/REA ou publicacao.
+Notas anteriores abaixo sao historicas; trabalho pendente preexistente preservado.
+
+## Rodada paralela e sondagem limitada - 2026-10-12
+
+MB236 segue blocked. Nova autorizacao permitiu uma unica tentativa gpt-6-astra
+com mesma pergunta/conta e leitura limitada do corpo recusado. Sessao expirada,
+um refresh oficial da mesma conta passou. HTTP200/CT ausente/TE chunked, parser
+sem defeitos; unica leitura416/4096 bytes tem prefixo SSE aparente nao validado.
+Sem corpo bruto armazenado/modelo aceito, sem guard relaxado ou retry/fallback.
+Browser proof falhou e nao repetiu POST; instancia propria encerrada. Export
+readonly quiescente confirmou unico turno/final nativa2635/21 eventos,
+ALLOW/rejected/inference_failed/analysis0. DOM/reload novos nao comprovados.
+Fonte exata da omissao ainda nao comprovada; outra inferencia novo consentimento.
+
+Operador autorizou outras frentes multiagentes: T03 portabilidade fixtures
+Linux; F13 novo piloto readiness MCP -> relatorio Core/Memory sem dispatch
+governado; F05 resumo readonly de jobs selecionados. Ownership/testes/runbooks
+exclusivos registrados em execution-backlog.md. Integracao local validada,
+sem promocao de capability, conta compartilhada, commit/push/merge implicitos.
+F05 final71 e F13 final160 passaram com revisao cruzada/locks de evidencias e
+pipes reais fechados; T03 voz512 passou Windows/Linux. Gate Linux completo
+apontou3 falhas auxiliares corrigidas: Dockerfile exato no source archive e
+ROOT explicito em dois filhos -I de testes SIWC. Runner32 e storage88 passaram
+nos dois SO; locks/timeouts/contencao preservados, nenhum runtime de conta
+alterado. Standard Linux9185 passed/239 skipped/9424 casos, Windows9303
+passed/111 skipped/9414 casos: exit0/zero falhas, contagens dos marcadores -qq.
+Windows global cobre apps finais e foco/quick cobrem ferramentas auxiliares
+atuais;14 hashes de apps/diagnostico/corpus preservados depois dos gates.
+Detalhes: docs/operations/parallel-wave-readiness-activity-and-linux.md.
+Notas abaixo descrevem rodadas anteriores; runbook OAuth traz atualizacao atual.
+
+## Origem HTTP e revisao PR-1 - 2026-10-12
+
+MB236 continua blocked. Investigacao readonly do transporte nao comprovou
+defeito local corrigivel; guard/schema/caps preservados, sem mudanca no codigo
+do runtime. Instancias temporarias proprias sao descritas abaixo.
+GET publico sem conta/corpo:401/JSON, TLS verificado/issuer publico conhecido/
+peer publico, server cloudflare, sinais API/CF presentes, via ausente, sem
+overrides de routing.142 HTTP/TLS/Core/Memory passaram; hashes iguais ao
+standard anterior. Sonda local ignorada por Git, self-test sem rede/conta,
+usa factory observadora sobre HTTPS real e marca injected_transport.
+Uma tentativa unica autorizada gpt-6-astra/pergunta exata pela Web/Core:200,
+CT ausente, headers presentes/parser sem defeitos, TE chunked declarado.
+Server cloudflare/CF trace presente/cache hint presente, sinais API ausentes,
+via/envoy ausentes; TLS issuer conhecido/peer publico. Isso e compativel com
+resposta de borda, NAO identifica componente que omitiu CT, cache hit, WAF,
+quota ou conta. Sem corpo/headers/certificados/IDs brutos, refresh/retry/fallback.
+Final nativa2635 exata a Memory/export/GET/reload; ALLOW/rejected, analysis0,
+consentimento apagado, zero pageerrors; browser/servidor proprios fechados.
+Store/SQLite retidos. Prova instrumentada nao homologa modelo/qualidade.
+PR-1 docs/autoevolucao revisado no head e9f4144: exatamente2 Markdown,31 links
+relativos validos, proposta nao aceita coerente, sem bloqueador novo no diff
+identificado. CI vermelho; erro terminal tambem no baseline. Docker readonly/
+sem rede reproduziu INTERNALERROR exit3 do teste TTS: paths C:/ invalidos em
+POSIX e patch global de Path quebra o reporter. Reproducao pura confirmou
+recusa legitima/zero filesystem IO. Nao corrigi TTS nesta investigacao OAuth,
+nao publiquei review/comentario nem resolvi thread/merge/push. Detalhes:
+docs/operations/pr-1-documentation-review-2026-10-12.md e runbook OAuth.
+Proximo passo: triagem da entrega externa, sem outra inferencia automatica;
+correcao CI em recorte separado. Notas abaixo historicas.
+Gate standard final Windows:9222 casos,9111 passed/111 skipped/zero failed/errors.
+Runtime/corpus inalterados por hashes; PR segue aberta no mesmo head e9f4144.
+Este gate nao substitui o CI Ubuntu da PR; reproducao Linux esperadamente falhou.
+
+## Parsing e enquadramento OAuth - 2026-10-12
+
+MB236 blocked para aceite real. Operador autorizou diagnostico e uma nova
+tentativa unica, mesma conta/modelo/pergunta, refresh somente se expirada.
+Seis fases opt-in/26 categorias fixas para versao HTTP, headers empty/present,
+defeitos do parser, presenca de media type e enquadramento CL/TE. Schema5/max256,
+None/default, guard/caps/recusa publica intactos; sem corpo, header bruto,
+texto de defeito, identidade/credencial ou dependencia central nova.
+48 unitarios novos e9 TLS/Core/Memory/restart;62 casos adicionais de allowlist.
+723 focados antes da ampliacao de10 adversariais,48 unitarios finais aprovados.
+Standard global Windows9222 casos:9111 passed/111 skipped/zero failed/errors.
+Runtime/corpus com hashes iguais apos gate. Preflight real selecionado validou
+vinculo e escopo; sessao nao expirada, zero refresh.
+Uma tentativa unica gpt-6-astra/pergunta exata em UUID Web novo: catalogo,
+selecao/provider passaram; HTTP1.1/200, headers presentes, parser sem defeitos
+detectados, Content-Type ausente, Content-Length ausente e Transfer-Encoding
+chunked declarado. Recusa unsupported_response_encoding antes de ler corpo.
+Nao apareceu MissingHeaderBodySeparatorDefect; nao atribuir causa ao servico,
+gateway ou conta, nem provar corpo valido. ALLOW/rejected/inference_failed,
+final nativa2635 exata a Memory/export/GET/reload (hash no runbook), zero
+pageerrors, consentimento apagado, um POST Web. Browser/servidor proprios
+fechados, dois SQLite/store preservados. Sem reenvio/fallback/tools/promocao.
+Proximo recorte: investigar origem da resposta sem declaracao SSE; nova
+inferencia exige novo consentimento. Ultimo validado MB235, F01/F06 partial.
+Sem commit/push. Notas abaixo historicas; runbook real-oauth-acceptance.md.
+Pos-metadados:307 consumidores readonly inventario/MCP passaram. O primeiro
+resumo autoral excedeu512 caracteres e foi recusado pelos validadores; somente
+texto reduzido para500, nenhum cap/schema/assertion relaxado. Runtime/corpus
+mantiveram hashes do standard; gate quick e diff-check finais aprovados.
+
+## Retomada OAuth - 2026-10-12
+
+MB236 blocked para aceite real: login oficial concluido, operador confirmou
+mesma conta; novo registro local validado/plan_scope_granted=true/DPAPI, pois
+mapping/client/host antigos ausentes. Isso nao prova restauracao/binding ao
+registro perdido. Nenhum token de outro app importado; sessao nao expirada,
+zero refresh. Hashes de runtime/corpus iguais ao standard8992 passed/111 skipped.
+Uma tentativa unica gpt-6-astra/pergunta exata em Web UUID novo: catalogo,
+selecao/provider passaram, HTTP200, response_media_type_missing e
+response_encoding_identity, depois unsupported_response_encoding antes de
+ler SSE. Categorias indicam media type ausente/vazio e encoding identity/vazio/
+default; nao distinguem header ausente de valor vazio ou provam bytes do corpo.
+Nenhum corpo lido/registrado; nao afirmar stream valido, causa do servidor ou
+resposta concluida do modelo. ALLOW/rejected/inference_failed, final nativa2635
+exata a Memory/export/GET/reload; SHA256 no runbook. Um POST Web, zero pageerrors,
+sem reenvio/fallback/tools. Somente instancia/browser proprios fechados, stores
+retidos. Proximo recorte candidato: investigar falta de media type esperado,
+sem relaxar parser/aceitar corpo por hipotese; nova inferencia exige novo
+consentimento. Ultimo validado MB235; modelo/qualidade nao homologados.
+Sem commit/push. Notas abaixo registram estados anteriores.
+Pos-metadados da retomada:296 consumidores readonly de inventario/MCP
+passaram; quick, CLI readonly e diff-check aprovados. Runtime/corpus mantiveram
+hashes do standard; somente docs/estado da prova atualizados nesta retomada.
+
+## Rodada ativa - MB236 - 2026-10-12
+
+MB236 blocked para prova real: diagnostico MIME/encoding refinado e validado.
+69 unitarios novos e16 TLS/Core/Memory,24 casos parametrizados adicionais e
+772 focados integrados passaram. Standard global Windows9103 casos:8992
+passed/111 skipped/zero failed ou errors; auditoria readonly sem bloqueador.
+Hashes de runtime/corpus iguais antes e depois do gate. Duas fases host opt-in
+com12 categorias fixas; schema/max256/default None/recusa publica intactos.
+Sem headers brutos/corpos, descompressao, retry, fallback ou limite ampliado.
+Operador autorizou uma nova tentativa unica gpt-6-astra/mesma pergunta e
+refresh somente se a mesma sessao expirada. Preflight local selecionado
+recusou siwc_storage_unavailable. Checagem dirigida confirmou diretorio privado
+escolhido ausente (parents existentes); nao prova revogacao, expiry ou autoria
+da ausencia. Nenhum refresh, catalogo real, inferencia, login ou outro store
+acessado. Nenhuma instancia Web/browser real nova iniciada nesta rodada.
+Tentativa autorizada nao realizada, nao consumida como envio de pergunta.
+Depende de restaurar o store escolhido ou autorizar novo login da mesma conta;
+nao criar/importar outra conta implicitamente. Ultimo validado MB235; F01/F06
+partial e qualidade nao homologada. Sem commit/push. Notas abaixo historicas.
+Pos-metadados:296 consumidores readonly de inventario/MCP passaram; quick,
+CLI readonly e diff-check aprovados. Runtime/corpus continuam com hashes do
+standard; somente docs/estado e expectation de inventario mudaram depois dele.
+
 ## Publicacao solicitada - 2026-10-07
 
 Operador autorizou publicar todas as implementacoes pendentes na main:
