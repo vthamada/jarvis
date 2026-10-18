@@ -2,6 +2,12 @@
 
 ## 2026-10-18
 
+- PR#2: primeiro gate Linux11198 passou/195 skips/11 falhas. Corrigidas fixtures
+  de interpreter symlink (guardas runtime preservadas), recusa explicita de
+  IPv6 mapped e retencao do inode pending POSIX ate cleanup. Regressao mapped
+  demonstrou RED; nova regressao POSIX valida descriptor/arquivo substituido.
+  Bateria afetada Windows512 passou/2 skips; novo gate CI exigido antes de merge.
+
 - Preparacao da publicacao das frentes pendentes autorizada pelo operador;
  167 arquivos revisados, sem credenciais/audios/modelos privados. Gate local
  de publicacao parcial: uma falha nao reproduzida em recuperacao duravel;

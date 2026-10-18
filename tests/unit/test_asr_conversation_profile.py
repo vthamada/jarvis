@@ -84,7 +84,7 @@ def test_host_profile_never_selects_unrecognised_decoding(local_profile, selecte
 
 def test_web_wrapper_forwards_policy_through_owned_worker_and_cleans_draft(tmp_path, monkeypatch):
     config = voice_profile.LocalAsrConfig(
-        tmp_path, Path(sys.executable), "cpu", 20, "conversation",
+        tmp_path, Path(sys.executable).resolve(strict=True), "cpu", 20, "conversation",
     )
     output = BytesIO()
     with wave.open(output, "wb") as audio:

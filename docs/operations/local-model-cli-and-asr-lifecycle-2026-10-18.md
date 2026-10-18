@@ -180,6 +180,38 @@ completa continua parcial; CI Linux do PR e a execucao duravel do mesmo gate
 standard exigida antes do merge. Esta secao registra o estado pre-publicacao;
 os checks do PR sao a fonte do resultado remoto posterior.
 
+### Corretivos do primeiro gate Linux do PR#2
+
+Publicacao inicial5c4e8ae: [PR#2](https://github.com/vthamada/jarvis/pull/2).
+[Gate inicial](https://github.com/vthamada/jarvis/actions/runs/39162142329)
+concluiu11198 passed/195 skipped/11 failed (marcadores -qq), exit1.
+
+- Nove falhas de fixtures: sys.executable no runner e um symlink. Apenas as
+  fixtures resolvem o interpreter confiado; _plain_path continua recusando
+  symlinks/redirecionamentos de entrada. Regressao explicita garante que um
+  interpreter symlink nao possa iniciar o worker.
+- IPv6 mapped: a politica nao deve depender de mudancas de classificacao ou
+  renderizacao de ipaddress entre releases Python. Agora recusa ipv4_mapped
+  explicitamente. Novo teste simula classificacao loopback permissiva e prova
+  recusa de formas dotted/hex; RED Windows anterior:1 failed/1 passed.
+- Cleanup de audio POSIX: apos fechar o pending original, unlink/recreate podia
+  reutilizar o mesmo inode e fazer cleanup remover um arquivo substituto.
+  Descriptor duplicado proprio mantem o inode vivo ate terminar publicacao/
+  cleanup, depois e fechado em finally. Windows preserva regras de sharing.
+  O teste original falhou no CI; nova regressao POSIX exige original retido com
+  nlink0, inode diferente do substituto, arquivo estrangeiro preservado e fd
+  fechado ao final. Nao se alega protecao universal contra atores host adversos.
+
+Bateria afetada Windows fresca512 passed/2 skipped/44.75s; skips de contrato
+POSIX e ausencia de privilegio para criar symlink. Vizinhanca TTS/Core/Web:
+264 passed/146.50s; selecao inicial nao coletou por nome de arquivo incorreto,
+depois corrigido sem alterar testes. Quick/Ruff/diffcheck passaram.
+Docker Linux nao estava disponivel no pipe consultado; nenhum daemon iniciado,
+download ou mudanca de configuracao. Novo CI completo no head corrigido deve
+concluir antes do merge, com resultado posterior registrado nos checks do PR;
+estas correcoes nao explicam a falha Windows inicial
+de recuperacao duravel, que permaneceu nao reproduzida.
+
 ## Proximo aceite e rollback
 
 O operador informou inicialmente nao ter servidor local. Recomendacao inicial

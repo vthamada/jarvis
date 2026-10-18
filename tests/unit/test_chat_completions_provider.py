@@ -7,6 +7,7 @@ from dataclasses import replace
 from threading import Event
 
 import pytest
+from inference_service import local_chat_transport
 from inference_service.chat_completions_provider import ChatCompletionsInferenceProvider
 from inference_service.local_chat_transport import LocalChatHttpTransport, LocalChatTransportError
 
@@ -90,6 +91,16 @@ def test_text_contract_serializes_system_and_history_without_grants_or_tools():
 def test_endpoint_refuses_dns_network_redirect_surfaces_credentials_and_ambiguity(endpoint):
     with pytest.raises(ValueError, match="^invalid_local_chat_endpoint$"):
         LocalChatHttpTransport(endpoint=endpoint)
+
+
+@pytest.mark.parametrize("host", ["::ffff:127.0.0.1", "::ffff:7f00:1"])
+def test_mapped_ipv6_is_refused_even_if_stdlib_classifies_it_as_loopback(monkeypatch, host):
+    # Python releases differ in mapped-address classification and formatting.
+    # The host policy excludes mapped IPv6 independently of those conveniences.
+    monkeypatch.setattr(local_chat_transport.ipaddress.IPv6Address, "is_loopback",
+                        property(lambda self: True))
+    with pytest.raises(ValueError, match="^invalid_local_chat_endpoint$"):
+        LocalChatHttpTransport(endpoint=f"http://[{host}]:80/v1/chat/completions")
 
 
 @pytest.mark.parametrize("endpoint", ["http://127.0.0.1:11434/v1/chat/completions",

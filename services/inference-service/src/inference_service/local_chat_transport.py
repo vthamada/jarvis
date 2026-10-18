@@ -63,7 +63,10 @@ def _endpoint(value: str) -> tuple[str, int, int, str]:
                 or parsed.password is not None or parsed.port is None):
             raise ValueError
         address = ipaddress.ip_address(parsed.hostname or "")
-        if not address.is_loopback or not 1 <= parsed.port <= 65535:
+        # Mapped IPv6 remains outside policy even when a stdlib release treats
+        # it as loopback or renders it in dotted IPv4 notation.
+        if ((address.version == 6 and address.ipv4_mapped is not None)
+                or not address.is_loopback or not 1 <= parsed.port <= 65535):
             raise ValueError
         host = str(address)
         authority = f"[{host}]:{parsed.port}" if address.version == 6 else f"{host}:{parsed.port}"

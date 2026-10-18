@@ -132,7 +132,7 @@ def test_icl_private_stdin_binding_and_metadata_without_transcript(tmp_path, pro
         reference_path=source,
         text="Outra frase.",
         model_dir=model,
-        python_executable=Path(sys.executable),
+        python_executable=Path(sys.executable).resolve(strict=True),
         workspace_root=tmp_path,
         voice_profile=profile,
         reference_start_seconds=5,

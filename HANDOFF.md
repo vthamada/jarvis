@@ -1,5 +1,27 @@
 # HANDOFF
 
+## PR#2: corretivos comprovados pelo CI Linux - 2026-10-18
+
+Implementacoes publicadas em5c4e8ae, PR https://github.com/vthamada/jarvis/pull/2.
+Primeiro gate Linux completo:11198 passed/195 skipped/11 failed, exit1;
+run39162142329. Nove falhas eram fixtures usando o symlink sys.executable:
+fixtures agora resolvem somente o interpreter confiado do teste, sem relaxar
+as guardas de paths do runtime. Novo teste exige recusa de interpreter symlink.
+Duas falhas de runtime corrigidas: IPv6 mapped explicitamente recusado mesmo
+quando ipaddress muda classificacao/renderizacao; arquivo pending POSIX mantem
+descriptor proprio aberto ate cleanup para impedir reuso imediato de inode.
+Teste determinista mapped demonstrou RED (1 failed/1 passed) antes da correcao;
+caso original de substituicao falhou no CI e novo teste POSIX atesta inode/fd.
+Bateria Windows afetada512 passed/2 skipped/44.75s; skips de contrato POSIX e
+criacao de symlink sem privilegio no host. Nao e aceite Linux nem ML/microfone.
+Regressao vizinha TTS/Core/Web:264 passed/146.50s. Quick, Ruff e diffcheck passaram.
+Docker Linux indisponivel no pipe consultado;
+nenhum daemon iniciado, imagem baixada ou configuracao alterada. Corretivos
+exigem novo gate completo no CI antes do merge, sem bypass ou force push;
+os checks do PR registram o resultado remoto posterior a esta verificacao local.
+Falha inicial Windows de recuperacao duravel abaixo continua nao reproduzida;
+nenhum corretivo aqui e apresentado como sua causa ou solucao.
+
 ## Preparacao da publicacao solicitada - 2026-10-18
 
 Operador autorizou publicar as implementacoes pendentes e integrar na main.

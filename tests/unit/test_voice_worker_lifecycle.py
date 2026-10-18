@@ -398,7 +398,7 @@ def transcription_arguments(tmp_path):
         wav.setparams((1, 2, 8000, 0, "NONE", "not compressed"))
         wav.writeframes(b"\x01\x00" * 8000)
     return dict(authorized=True, source=source, model_dir=models,
-                python_executable=Path(sys.executable))
+                python_executable=Path(sys.executable).resolve(strict=True))
 
 
 def test_lifecycle_flag_is_strict_before_source_io(transcription_arguments):
