@@ -1,5 +1,29 @@
 # Implementation Master Map
 
+2026-10-18 continuidade F01/F02/F03: guidance explicito de continuacao/finalizacao
+e IDs sem colisao, mantendo limites/recusas/policy.157unit/75Core/175CLI-HTTP
+passaram; final171focados e standard novo11421 passed/124 skipped/zero falhas.
+Novo piloto Qwen max9 parou na4a tentativa
+por timeout,3 concluidas/3reads, sem segundo turno/controle. Complemento offline
+por fase/ID sem sugestao contraditoria implementado depois, sem nova inferencia.
+Memoria real nao demonstrada;5novas e2antigas chamadas nao usadas.
+WIP1 mantido, sem Web/voz/efeitos novos. Runbook:
+docs/operations/tool-loop-continuation-and-memory-2026-10-18.md.
+
+2026-10-18 F01/F02/F03: historico canonico opt-in nas CLIs de tool-loop,
+mesmo sujeito/sessao/limites/fences e sem anexos. F04 separa fontes do intent
+pela seam reviewed limitada, sem resolver envelopegrader ou promover missoes.
+128focados/389regressao passaram; standard Windows11390 passed/124 skipped,
+zero falhas/errors,14 hashes Python preservados. Prova gpt-6.1-sol
+autorizada apos um refresh expirado da mesma conta parou na primeira inferencia
+HTTP200/CTausente/TEchunked, sem tools/retry. MB236 blocked; nada de modelo real
+homologado/Webtools/vozfluida. Qwen3:4b-instruct instalado com autorizacao;
+piloto apos gate concluiu4 inferencias/3 leituras, mas recusou reused_call_id
+sem analise aceita ou segundo turno. Sem retry;2 chamadas nao usadas e modelo
+descarregado. Investigar continuacao/budget/finalizacao mantendo guardas;
+nao e causa comprovada ou aceite de conversa util/memoria real.
+Runbook: docs/operations/canonical-history-conversation-pilot-2026-10-18.md.
+
 2026-10-17, F01/F04: campanha opt-in de25 missoes publicas sinteticas e grader
 independente implementados, V1 preservado. Baseline sem produto aceito aponta
 gap de adapter/roteamento; piloto gpt-6.1-sol parou por sessao expirada sem

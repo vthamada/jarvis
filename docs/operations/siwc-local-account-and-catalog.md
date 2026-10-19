@@ -1,5 +1,11 @@
 # MB222: conta local ChatGPT e catalogo SIWC
 
+2026-10-18: mesma conta confirmada/unico perfil, sessao expirada renovada uma vez
+sob autorizacao explicita. Catalogo/selecao gpt-6.1-sol passaram na prova seguinte;
+unica inferencia HTTP200/Content-Typeausente foi recusada. Sem segundo refresh,
+novo login, retry, fallback ou modelo homologado; MB236 blocked. Detalhes atuais:
+canonical-history-conversation-pilot-2026-10-18.md. Notas seguintes historicas.
+
 Atualizacao 2026-10-17: piloto separado de missoes publicas com gpt-6.1-sol,
 mesma conta, teto10 autorizado. Primeira tentativa recusada no catalogo por
 siwc_credential_expired; zero inferencias concluidas, sem refresh/retry/fallback.

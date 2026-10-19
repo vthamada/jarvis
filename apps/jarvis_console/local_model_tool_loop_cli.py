@@ -60,7 +60,7 @@ def analyze_local_reports(document, *, reports, endpoint, model, session_id,
                           authorized=False, confirmed=False, reports_confirmed=False,
                           upstream_egress_acknowledged=False, timeout_seconds=30,
                           include_content=False, core_factory=None, port_factory=None,
-                          cancellation=None):
+                          cancellation=None, include_canonical_history=False):
     """Explicit host composition; input/model fields never select network targets.
 
     ``port_factory(endpoint, model)`` is a trusted injected-transport test seam,
@@ -68,6 +68,8 @@ def analyze_local_reports(document, *, reports, endpoint, model, session_id,
     Native Core admission remains before any inference or selected report read.
     """
     try:
+        if type(include_canonical_history) is not bool:
+            _invalid()
         transport, reader = _host_selection(
             reports=reports, endpoint=endpoint, model=model, session_id=session_id,
             authorized=authorized, confirmed=confirmed, reports_confirmed=reports_confirmed,
@@ -114,6 +116,7 @@ def analyze_local_reports(document, *, reports, endpoint, model, session_id,
             core_factory=core_factory, redactor=redactor, output_schema=OUTPUT_SCHEMA,
             cancellation=cancellation, expected_provider_id=_PROVIDER_ID,
             expected_evidence_mode=expected_evidence,
+            include_canonical_history=include_canonical_history,
         )
         result.update(
             provider_id=_PROVIDER_ID, endpoint_scope="numeric_loopback_http",
@@ -148,6 +151,10 @@ def main(argv=None):
     parser.add_argument("--report", action="append", required=True, metavar="ID=ABSOLUTE_PATH")
     parser.add_argument("--timeout-seconds", type=float, default=30)
     parser.add_argument("--include-content", action="store_true")
+    parser.add_argument(
+        "--include-canonical-history", action="store_true",
+        help="Send bounded same-subject/session canonical history to the selected server.",
+    )
     try:
         args = parser.parse_args(argv)
         reports = {}
@@ -164,7 +171,10 @@ def main(argv=None):
             timeout_seconds=args.timeout_seconds, include_content=args.include_content,
         )
         _host_selection(**options)  # Refuse invalid host choices before consuming stdin.
-        result = analyze_local_reports(read_review_input(), **options)
+        result = analyze_local_reports(
+            read_review_input(), **options,
+            include_canonical_history=args.include_canonical_history,
+        )
         print(json.dumps(result, ensure_ascii=True, allow_nan=False, sort_keys=True))
         return 0
     except KeyboardInterrupt:

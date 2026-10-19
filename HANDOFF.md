@@ -1,5 +1,75 @@
 # HANDOFF
 
+## Preparacao da publicacao solicitada - memoria e continuacao - 2026-10-18
+
+Operador autorizou subir as pendencias ao GitHub. Conjunto:31 arquivos;
+18 Python inicialmente conferidos contra snapshot posterior ao standard, sem
+divergencias. Staging revelou duas linhas extras no EOF de testes novos:
+normalizadas em test_mission_routing_core e test_tool_loop_continuation_guidance,
+AST identica confirmada e bateria fresca24passed/21,89s. Runtime nao alterado.
+Destino: codex/publish-canonical-history-continuation-2026-10-18 em vthamada/jarvis,
+com PR para main; merge nao solicitado. Base local/remota ae454a0 confirmada.
+Sem credenciais, audios, pesos, bancos, logs ou XML de teste no conjunto.
+Standard anterior a essa normalizacao:11421 passed/124 skipped/zero falhas/errors;
+quick de publicacao aprovado. A checagem
+de publicacao nao repete inferencias. Memoria real Qwen e MB236 seguem pendentes;
+nenhuma promocao de capability por publicar codigo. Estado efetivo de envio/CI
+deve ser conferido no remoto/PR; as notas seguintes precedem esta publicacao.
+
+## Continuidade/finalizacao do loop e memoria no segundo turno - 2026-10-18
+
+Novo pedido autorizado, mesmo WIP1. Runtime novo somente em shared/model_tool_loop:
+guidance host-derived de budget/observacoes/IDs e sugestao de finalizacao, sem
+novos grants/enforcement ou repair. Memoria opt-in anterior preservada; instrucao
+explicita permite preferencia conversacional, nunca autoridade. Tres agentes:
+testes de guidance, segundo turno e revisao readonly; root runtime/integracao/
+workloads/prova/docs. RED KeyError continuation;157unit/75Core/175CLI-HTTP passaram,
+selecoes sobrepostas; Ruff/diffcheck passaram. Standard desta continuidade exit0:
+11421 passed/124 skipped/zero falhas/errors,11545 casos,2212,79s.
+Operador autorizou NOVO piloto local max9 Qwen/sinteticos, sem retry/OAuth/pago;
+duas chamadas anteriores nao usadas continuam intactas. Piloto parou no primeiro
+turno:4tentativas/3concluidas/3reads, quarta timeout;1final nativa2635/39eventos.
+Primeira inferencia levou~94,46s, quarta tinha~9,42s no budget total120s; causa
+do custo nao isolada. Sem segundo turno/snapshot/controle/retry;5novas nao usadas.
+Modelo descarregado/pesos mantidos. Complemento offline por fase: READ so antes
+de observacao, FINAL primeiro apos evidencia, somenteFINAL sem saldo; nao
+sugerir ID de leitura ao sugerir finalizar. RED3schemas+1ID,160unit passaram
+antes do ultimo ajuste; bateria final171passed e standard aprovados, sem prova
+real da versao final. Uso de memoria real ainda nao demonstrado. Proximo passo:
+medir fases do transporte sem inferencias e planejar nova prova contabilizada;
+nao reusar saldo interrompido. XML gerado com nome relativo incorreto foi
+validado/movido para artefatos, sem mudar resultado. Runbook:
+docs/operations/tool-loop-continuation-and-memory-2026-10-18.md.
+Sem commit/push; registros seguintes sao historicos.
+
+## Conversa com memoria/ferramentas e prova gpt-6.1-sol - 2026-10-18
+
+Continuidade do WIP1 autorizado: workers memoria/avaliacao/review; root
+CLI/integracao/prova/testes/docs. Historico canonico opt-in nas duas CLIs:
+mesmo sujeito/sessao,6fontes/3pares/4000chars, sem anexos e screening sensivel
+antes projecao, events/binding/fences. Fontes das missoes usam seam reviewed,
+nao content de intent;512bundle/2048brief, envelopegrader ainda aberto.
+128focados e389regressao passaram, inclusive CLI/subprocess/HTTP/SQLite/restart;
+8falhas HTTP no ambiente restrito nao se repetiram com permissao de sockets,
+sem mudar codigo/testes. Standard Windows concluido exit0:11390 passed,
+124 skipped/zero falhas/errors;14 hashes Python preservados durante o gate.
+Autorizacao: mesma conta gpt-6.1-sol/ate6 chamadas sinteticas/refresh so expirado.
+Um refresh concluiu mesmo vinculo; uma inferencia falhou HTTP200/Content-Type
+ausente/TEchunked. Zero concluidas/tools/segundo turno/retry/fallback; final
+nativa2635/25eventos/readback confirmado. MB236 blocked; nao e conversa util
+homologada/Webtools.
+Download e piloto local separados foram autorizados: qwen3:4b-instruct instalado
+no Ollama,2497293803 bytes. Apos o gate,4 inferencias concluidas/3 leituras
+governadas (documentacao/observabilidade/documentacao); quarta proposta recusada
+reused_call_id. Sem analise aceita/segundo turno/retry;2 chamadas nao usadas.
+Readback local:1final nativa2635/40eventos, export exato. Modelo descarregado,
+pesos mantidos; nao mudou preferencia gpt-6.1-sol ou habilitou Web. Proximo slice:
+investigar instrucoes de continuacao/budget/finalizacao, sem relaxar guardas;
+hipotese, nao causa comprovada. Sem commit/push nesta continuidade.
+Runbook: docs/operations/canonical-history-conversation-pilot-2026-10-18.md.
+PR#2 anterior integrado squash ae454a0 apos CI Linux11224/195skips aprovado;
+main sincronizada antes deste novo trabalho. Notas abaixo historicas.
+
 ## PR#2: revisao SQLite e telemetria - 2026-10-18
 
 CI do head021e10e aprovado:11213 passed/195 skipped/zero falhas, run39163449556.

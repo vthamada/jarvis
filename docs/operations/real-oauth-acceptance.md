@@ -1,5 +1,12 @@
 # MB236 - homologacao controlada OAuth
 
+Atualizacao2026-10-18: nova prova autorizada mesma conta/gpt-6.1-sol/ate6 chamadas
+sinteticas, refresh somente expirado. Um refresh concluiu/vinculo preservado;
+catalogo/selecao passaram, unica inferencia recebeu HTTP200/CTausente/TEchunked
+e foi recusada antes SSE. Zero concluidas/tools/reenvio/fallback; um turno/final
+nativa2635/25eventos/readback confirmado. Sem relaxar parser; MB236 blocked.
+Runbook: canonical-history-conversation-pilot-2026-10-18.md. Notas abaixo historicas.
+
 ## Piloto separado F01/F04 - 2026-10-17
 
 O operador autorizou ate10 chamadas com gpt-6.1-sol na mesma conta para um

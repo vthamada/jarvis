@@ -47,16 +47,10 @@ class InjectedInference:
         if "binding" in value:
             text = _public_product(value)
         else:
-            # Generative synthesis treats the complete task input as one source.
-            # Its output is projected unchanged from the canonical final by the
-            # production port; this fixture never edits memory or the answer.
-            current = value["sources"][0]["text"]
-            brief, tail = current.split("\nRequest binding: ", 1)
-            raw_binding, raw_sources = tail.split("\nSupplied sources: ", 1)
-            product = _public_product({"brief": brief, "binding": json.loads(raw_binding),
-                                       "sources": json.loads(raw_sources)})
-            text = json.dumps({"analysis": product, "assumptions": [],
-                               "limitations": [], "citations": []})
+            # The public mission briefs still require native clarification.
+            # Never reconstruct an evaluation binding from hidden fixture state
+            # or reinterpret the old mixed-content grammar to fake competence.
+            raise AssertionError("scope-refused native mission reached inference")
         return InferenceResult(
             request_id=request.request_id, model=request.model, provider_id=self.provider_id,
             status="completed", text=text, evidence_mode=self.evidence_mode,
@@ -67,23 +61,37 @@ def test_real_native_slice_exposes_clarification_and_cleans_disposable_runtime(m
     # Full 25-case accounting is a unit composition check. This real-Core slice
     # validates the affected end-to-end seam without making a competence claim.
     monkeypatch.setattr(cli, "MISSIONS", cli.MISSIONS[:1])
-    cores, roots = [], []
+    cores, roots, routed = [], [], []
 
     def factory(path):
         roots.append(path)
         core = _isolated_core(path)
         cores.append(core)
+        direct = core.executive_engine.direct
+
+        def capture(contract):
+            routed.append(contract.content)
+            return direct(contract)
+
+        core.executive_engine.direct = capture
         return core
 
     result = cli.run_native_baseline(authorized=True, core_factory=factory)
     assert len(cores) == 2
-    assert result["canonical_core"]["core_turns"] == 2
+    assert result["canonical_core"]["core_turns"] == 0
     # Exact public mission text hits the current lexical routing guard. This is
     # an observed capability gap, not permission to force ALLOW for a benchmark.
     assert result["canonical_core"]["canonical_finals_verified"] == 0
     assert result["canonical_core"]["clarifications_required"] == 2
-    assert result["canonical_core"]["native_decisions_required"] == 2
-    assert result["canonical_core"]["last_outcome"] == "native_decision_required"
+    assert result["canonical_core"]["native_decisions_required"] == 0
+    assert result["canonical_core"]["last_outcome"] == "core_scope_refused"
+    assert result["canonical_core"]["source_routing"] == "request_bound_reviewed_bundle"
+    assert routed == [cli.MISSIONS[0].brief] * 2
+    assert all(source.text not in text for text in routed for source in cli.MISSIONS[0].sources)
+    native = [item for item in result["campaign"]["measurements"]
+              if item["arm_id"] == "jarvis-native"]
+    assert len(native) == 2
+    assert all(item["outcome"] == "needs_decision" and not item["success"] for item in native)
     assert result["campaign"]["expected_measurements"] == 4
     assert result["campaign"]["comparison_status"] == "not_comparable"
     assert not result["production_memory_opened"] and not result["external_model_used"]
@@ -91,8 +99,8 @@ def test_real_native_slice_exposes_clarification_and_cleans_disposable_runtime(m
     assert not result["promotion_allowed"] and not result["improvement_claim"]
 
 
-def test_injected_two_arm_pilot_uses_real_core_and_exact_canonical_readback(tmp_path):
-    inference, factories, finals, roots = InjectedInference(), [], [], []
+def test_injected_two_arm_pilot_preserves_native_refusal_without_source_inference(tmp_path):
+    inference, factories, finals, roots, routed = InjectedInference(), [], [], [], []
 
     def account_factory(*args):
         factories.append(args)
@@ -102,9 +110,10 @@ def test_injected_two_arm_pilot_uses_real_core_and_exact_canonical_readback(tmp_
         roots.append(path)
         core = _isolated_core(path)
         original = core.handle_input
+        direct = core.executive_engine.direct
 
-        def observed(contract):
-            response = original(contract)
+        def observed(contract, **options):
+            response = original(contract, **options)
             turns = core.memory_service.repository.fetch_recent_turns(str(contract.session_id), 2)
             assert len(turns) == 1
             assert turns[0].response_text == response.response_text
@@ -114,6 +123,11 @@ def test_injected_two_arm_pilot_uses_real_core_and_exact_canonical_readback(tmp_
                            response.response_text))
             return response
 
+        def capture(contract):
+            routed.append(contract.content)
+            return direct(contract)
+
+        core.executive_engine.direct = capture
         core.handle_input = observed
         return core
 
@@ -124,10 +138,22 @@ def test_injected_two_arm_pilot_uses_real_core_and_exact_canonical_readback(tmp_
     )
     assert len(factories) == 1
     assert factories[0] == (tmp_path / "unopened-account", PROFILE, "gpt-6.1-sol")
-    assert len(finals) == result["canonical_core"]["core_turns"] == 4
+    assert len(roots) == 4
+    assert len(finals) == result["canonical_core"]["core_turns"] == 0
     assert result["canonical_core"]["canonical_finals_verified"] == 0
     assert result["canonical_core"]["clarifications_required"] == 4
-    assert result["canonical_core"]["native_decisions_required"] == 4
+    assert result["canonical_core"]["native_decisions_required"] == 0
+    assert result["canonical_core"]["last_outcome"] == "core_scope_refused"
+    assert len(routed) == 4
+    assert set(routed) == {mission.brief for mission in cli.MISSIONS[:2]}
+    assert all("\nRequest binding: " not in text and "\nSupplied sources: " not in text
+               for text in routed)
+    assert all(source.text not in text for text in routed
+               for mission in cli.MISSIONS[:2] for source in mission.sources)
+    native = [item for item in result["campaign"]["measurements"]
+              if item["arm_id"] == "jarvis-canonical"]
+    assert len(native) == 4
+    assert all(item["outcome"] == "needs_decision" and not item["success"] for item in native)
     assert len(inference.requests) == 4  # Reference only; native never bypasses clarification.
     assert result["inference_budget"]["attempted_model_calls"] == len(inference.requests)
     assert result["campaign"]["expected_measurements"] == 8

@@ -143,6 +143,52 @@ Escalar ao operador quando:
 
 ## 4. Fila ativa
 
+### Continuidade do WIP1 - finalizacao e segundo turno (2026-10-18)
+
+- Estado: in_progress, mesmo item integrado; pedido explicito do operador.
+- Implementado: continuation host-derived com budget/IDs/observacoes, ID sugerido
+  sem colisao, reuso de observacoes e finalizacao, preservando todos os guards.
+- Paralelo: testes guidance e memoria/restart em owners separados, review readonly;
+  root unico executor/runtime/integracao/docs.157unit/75Core/175CLI-HTTP passaram,
+  selecoes sobrepostas; final171focados e standard novo11421 passed/124 skipped,
+  zero falhas/errors, exit0. Codigo local validado; objetivo real permanece parcial.
+- Prova real: NOVO teto9 locais Qwen autorizado, sinteticos/sem retry/OAuth/pago;
+  piloto parou primeiro turno:4tentativas/3concluidas/3reads, quarta timeout.
+  Sem segundo turno/controle,5novas nao usadas; saldo anterior nao consumido.
+  Complemento offline por fase e omissao de ID ao sugerir finalizar implementados
+  apos piloto, sem nova inferencia. Primeira chamada~94,46s consumiu prazo120s;
+  causa nao isolada, sem aumentar deadline/aquecimento escondido/novo provider.
+- Proximos aceites: final aceita, preferencia recuperada sem repeticao na segunda
+  pergunta, readback canonico exato, controle ablado e standard. Nao expandir
+  para Web/voz ou aumentar limites para ocultar falha.
+- Runbook: docs/operations/tool-loop-continuation-and-memory-2026-10-18.md.
+
+### Continuidade do WIP1 - conversa util e memoria (2026-10-18)
+
+- Estado: in_progress no mesmo item integrado; prioridade pedida pelo operador.
+- Objetivo: loop contextual sem bypass Core e prova com modelo real. Workers
+  memoria/avaliacao/review disjuntos; root CLI/integracao/prova/gate/docs.
+- Implementado: historico opt-in nas CLIs,6fontes/3pares/4000chars, mesmo
+  sujeito/sessao, screening sensivel, sem anexos; eventos/binding/fences.
+  Avaliador usa seam reviewed;512bundle/2048brief e envelopegrader ainda aberto.
+- Evidencia:128focados/389regressao passaram, CLIreal/HTTP/SQLite/restart;
+  8falhas HTTP restritas confirmadas de ambiente por lote identico aprovado
+  com permissao, sem mudar fontes. Standard Windows exit0:11390 passed,
+  124 skipped/zero falhas/errors;14 hashes Python preservados.
+- Conta: gpt-6.1-sol/ate6 chamadas sinteticas/refresh so expirado autorizados.
+  Um refresh concluiu mesmo vinculo; uma inferencia falhou HTTP200/CTausente/
+  TEchunked. Zero concluidas/tools/reenvio/fallback; final2635/25eventos/readback.
+  MB236 blocked; nao repetir pelo saldo nem promover modelo/voz/Webtools.
+- Local autorizado: qwen3:4b-instruct instalado; piloto apos gate com4 inferencias
+  concluidas/3 leituras governadas. Recusa reused_call_id, sem analise aceita ou
+  segundo turno;2 chamadas nao usadas/sem retry. Final nativa2635/40eventos,
+  export exato; modelo descarregado/pesos retidos, preferencia OAuth mantida.
+- Aceites seguintes: investigar continuacao/budget/finalizacao sem relaxar
+  guardas (hipotese, nao causa comprovada), provar conversa/memoria uteis com
+  modelo real; depois perfil/ticket/readback Webtool-loop e utilidade medida.
+  Nenhuma permissao de acao concedida ao modelo; WIP permanece in_progress.
+- Runbook: docs/operations/canonical-history-conversation-pilot-2026-10-18.md.
+
 ### Recorte integrado Web - conversa por voz local (2026-10-17)
 
 - Estado: in_progress, WIP integrado1; ponte experimental integrada/gate aprovado,

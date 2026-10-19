@@ -60,8 +60,8 @@ def test_event_drift_prevents_publishing_an_unverified_canonical_answer(tmp_path
         core = _isolated_core(runtime)
         handle = core.handle_input
 
-        def corrupt(contract):
-            response = handle(contract)
+        def corrupt(contract, **options):
+            response = handle(contract, **options)
             with sqlite3.connect(runtime / "events.db") as db:
                 db.execute("DELETE FROM internal_events WHERE event_name='memory_recorded'")
             return response
@@ -121,7 +121,7 @@ def test_keyboard_interrupt_propagates_instead_of_starting_later_missions(tmp_pa
     def factory(runtime):
         core = _isolated_core(runtime)
 
-        def interrupted(_contract):
+        def interrupted(_contract, **_options):
             raise KeyboardInterrupt()
 
         core.handle_input = interrupted

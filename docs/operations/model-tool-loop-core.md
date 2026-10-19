@@ -1,5 +1,10 @@
 # Loop modelo/Core/ferramenta de relatorios locais
 
+Atualizacao2026-10-18: historico canonico opt-in nas CLIs, mesmo sujeito/sessao,
+sem anexos nao confiaveis. Prova gpt-6.1-sol apos refresh expirado da mesma conta
+parou HTTP200/Content-Typeausente, sem tools/retry/modelo homologado ou Web.
+Evidencias/gate: canonical-history-conversation-pilot-2026-10-18.md.
+
 Data: 2026-10-16. Recorte opt-in nativo F01/F03; nao e fechamento macro,
 homologacao de modelo real, executor geral ou retomada duravel de jobs.
 

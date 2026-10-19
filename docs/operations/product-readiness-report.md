@@ -1,5 +1,23 @@
 # Inventário atual de prontidão do produto
 
+Continuidade 2026-10-18: loop com progresso/instrucoes por fase; segundo turno
+contextual provado em fixture sobre Core/SQLite/restart reais. Piloto Qwen novo
+parou na4a tentativa por timeout,3 concluidas/3reads, sem segundo turno/controle.
+Cinco chamadas novas nao usadas, sem retry; memoria real ainda nao aceita.
+Complemento final por fase posterior ao piloto validado offline;171 focados
+passaram, novo standard11421 passed/124 skipped/zero falhas/errors, exit0.
+Estados macro/MB236 preservados. Runbook:
+[continuacao e memoria](tool-loop-continuation-and-memory-2026-10-18.md).
+
+Snapshot 2026-10-18: historico canonico opt-in CLI e separacao de fontes do
+avaliador implementados/testados. Standard Windows11390 passed/124 skipped,
+zero falhas/errors. OAuth gpt-6.1-sol:1 tentativa recusada sem Content-Type,
+apos renovacao autorizada de sessao expirada. Qwen3:4b-instruct instalado e
+piloto local4 inferencias/3 leituras; reused_call_id impediu analise aceita.
+Sem retry/segundo turno ou memoria real homologada; estados macro/MB236 iguais.
+Runbook: [conversa e pilotos](canonical-history-conversation-pilot-2026-10-18.md).
+Registros anteriores abaixo sao historicos.
+
 Snapshot F01/F04 2026-10-17:25 missoes publicas sinteticas, grader e comparador
 opt-in disponiveis. Baseline aponta lacuna de adapter/roteamento, nao sucesso;
 piloto OAuth gpt-6.1-sol interrompido por sessao expirada, sem refresh/retry.
