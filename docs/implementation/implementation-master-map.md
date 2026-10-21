@@ -1,5 +1,53 @@
 # Implementation Master Map
 
+Execução atual 2026-10-20: replay textual Hermes pin0b8dee00 reutilizado opt-in,
+baseline/candidata no mesmo Core e comparador com memória/restart/controle.
+Gate portátil com temporários isolados/JUnit, sem checks relaxados; validação
+global aprovada11904passed/124skips/0falhas. Piloto real6tentativas: ambos
+fecharam loop/2fontes, mas falharam preferência/layout seed; memória/controle
+não executados. Sem vantagem demonstrada ou promoção macro/MB236. Próximo foco:
+intenção/formato, resposta Core legível e depois memória. Evidência e limites:
+[experimento Hermes](../operations/hermes-context-comparison-2026-10-20.md).
+
+Direção de seleção atualizada em 2026-10-20: composição seletiva orientada a
+tarefas, incluindo reuso real de código, sem promoção implícita. Norte e
+alternativas no [Technology Absorption Order](../architecture/technology-absorption-order.md);
+próximo experimento na [fila única](execution-backlog.md). O Documento-Mestre
+continua canônico; os estados de produto e MB236 não mudaram por esta decisão.
+
+Atual2026-10-20: schemas locais opt-in por progresso implementados, default-off,
+sem alterar Core/parser/limites.376 focados e standard Windows11712 passed/
+124 skipped/zero falhas/errors;20 hashes Python e inventario sem drift no gate.
+Cinco ensaios Qwen somam14tentativas/12respostas: ultimo fechou1comparacao de
+duas fontes, mas segundo turno com historico e fontes novas estourou120s na
+finalizacao. Controle real nao executado; memoria util ainda nao comprovada.
+Latencia permanece lacuna, sem causalidade demonstrada. Sem retry/warmup/OAuth/
+API paga ou promocao macro/MB236. Nenhuma inferencia em curso. Runbook:
+docs/operations/structured-local-conversation-2026-10-20.md.
+Estudo aditivo ai-memory pin5519b89c: util para FTS/RRF/context packing/handoffs,
+nao substituto do canonico. Sem instalar/executar/integrar. Plano experimental:
+docs/implementation/ai-memory-assessment-2026-10-20.md.
+Registros abaixo sao historicos.
+
+2026-10-20 F01/F13: importacao opt-in de Evidence REA JavaScript estatico via
+projecao bounded e source-review/Core/memoria; nao executor nem digest/origem
+verificados. F01 ganha phase_observer default-off no transporte/provider local;
+257 testes REA/source-review e327 inferencia/HTTP passaram. Standard terminou
+exit1/11689 coletados/duas falhas;66 testes dos dois arquivos passaram na repeticao
+sem mudancas. Causa inconclusiva; WIP in_progress, sem novo standard verde.
+Fork00a055be/6.7.0 compiladooffline apos dependencia Debian recusada;2analises
+REA reais/Core/SQLite/restart com DEFER nativo, nao dispatch governado.
+OpenMausBot1db45cab
+analisado, referencia para F05/F06/F09/F10 sem copiar codigo/cerebro/enterprise.
+Sem nova inferencia, promocao macro ou desbloqueio MB236. Runbook:
+docs/operations/rea-static-evidence-and-local-phase-timing.md.
+Notas anteriores abaixo sao historicas.
+
+Pedido adicional Harness2 pin1cfe254e estudado: laboratorio para F04/T02 e
+OperatorLearningLoop existente, sem instalar/executar/promover. Comparar contra
+baseline elegivel; nao copiar sandboxoff/redeampla/politicaseditaveis. Estudo:
+docs/implementation/harness2-assessment-2026-10-20.md.
+
 2026-10-18 continuidade F01/F02/F03: guidance explicito de continuacao/finalizacao
 e IDs sem colisao, mantendo limites/recusas/policy.157unit/75Core/175CLI-HTTP
 passaram; final171focados e standard novo11421 passed/124 skipped/zero falhas.

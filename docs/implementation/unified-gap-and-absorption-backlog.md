@@ -1,5 +1,57 @@
 # Unified Gap and Absorption Backlog
 
+Prioridade executada nesta rodada2026-10-20: absorção real e pequena do replay
+Hermes pin0b8dee00 dentro do loop nativo, com comparação baseline/candidata,
+memória/restart/controle e gate portátil. Gate aprovado; piloto real6tentativas
+fechou ambos os loops/2fontes, mas reprovou preferência/layout seed; memória/
+controle não executados e vantagem não demonstrada. Fatos corretos na revisão
+humana não alteram aceite. Próximo foco: intenção/formato e síntese útil nativa;
+não é adoção do cérebro Hermes, nova frente macro ou desbloqueio MB236.
+Critérios na fila única; evidência no
+[runbook Hermes](../operations/hermes-context-comparison-2026-10-20.md).
+
+Atual2026-10-20: schemas locais opt-in por progresso implementados, default-off,
+sem alterar Core/parser/limites.376 focados e standard Windows11712 passed/
+124 skipped/zero falhas/errors;20 hashes Python e inventario sem drift no gate.
+Cinco ensaios Qwen somam14tentativas/12respostas: ultimo fechou1comparacao de
+duas fontes, mas segundo turno com historico e fontes novas estourou120s na
+finalizacao. Controle real nao executado; memoria util ainda nao comprovada.
+Latencia permanece lacuna, sem causalidade demonstrada. Sem retry/warmup/OAuth/
+API paga ou promocao macro/MB236. Nenhuma inferencia em curso. Runbook:
+docs/operations/structured-local-conversation-2026-10-20.md.
+Estudo aditivo ai-memory pin5519b89c: util para FTS/RRF/context packing/handoffs,
+nao substituto do canonico. Sem instalar/executar/integrar. Plano experimental:
+docs/implementation/ai-memory-assessment-2026-10-20.md.
+Registros abaixo sao historicos.
+
+2026-10-20, F01/F13: primeira fronteira REA implementada como importacao de
+Evidence JS estatico/projecao bounded/source-review/Core/final canonica; nao
+executor externo, autenticidade ou verificacao RFC8785. Diagnostico de fases
+local default-off implementado sem relaxar EOF/budget/fences.257 REA/source-review
+e327 inferencia/HTTP passaram. Standard exit1/11689 coletados/duas falhas;
+repeticao dos dois arquivos sem mudancas:66 passed, causa inconclusiva.
+Sem novo standard verde; WIP in_progress. O REA deixou de ser somente
+referencia nesse recorte de admissao, mas execucao integrada/dispatch governado e
+demais familias continuam pendentes. Pin00a055be compiladooffline apos dependencia
+Debian recusada:2execucoesREA estaticas reais, sem executaralvo, admitidascomo
+evidencia revisada/Core/SQLite/restart com decisao DEFER nativa. Nao e aceite
+completo da rodada. Runbook:
+docs/operations/rea-static-evidence-and-local-phase-timing.md.
+
+Prioridades derivadas do estudo OpenMausBot1db45cab (sem importar runtime):
+1. medir fases antes de nova prova contabilizada de conversa/memoria;
+2. fechar utilidade REA selecionada e dispatch exato pre-I/O;
+3. F05 arvore/inbox/reconciliacao sem replay incerto;
+4. F06 eventos reais/replay com lacuna e aprovacao explicita;
+5. F09/F10 refs invalidadas/takeover/egress por conexao, com prova isolada.
+Nao copiar agentes como cerebro, credenciais, enterprise ou defaults de LAN.
+Estudo: docs/implementation/openmausbot-assessment-2026-10-20.md.
+Harness2 pin1cfe254e acrescenta referencia F04/T02: experimentos comparados e
+experiencias via OperatorLearningLoop/Evolution existentes, baseline elegivel e
+sem politicaseditaveis/memoriafactualparalela. Nao executado/promovido. Estudo:
+docs/implementation/harness2-assessment-2026-10-20.md.
+Notas anteriores abaixo sao historicas.
+
 2026-10-17, F01/F04:25 missoes publicas sinteticas/runner comparativo implementados.
 Novo gap comprovado no recorte: adapter serializa protocolo/fontes na query e
 roteamento lexical pede esclarecimento, impedindo produto avaliavel. Priorizar

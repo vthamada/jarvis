@@ -22,6 +22,54 @@ from apps.jarvis_console.runtime import ConsoleRuntime
 INPUT_SCHEMA = "jarvis-local-model-tool-loop-v1"
 OUTPUT_SCHEMA = "jarvis-local-model-tool-loop-result-v1"
 _PROVIDER_ID = "chat_completions_local"
+_PHASE_FIELDS = frozenset({"event", "phase", "elapsed_ms", "timing_mode"})
+_TRANSPORT_PHASES = frozenset({
+    "connect_complete", "request_sent", "first_byte", "headers_validated",
+    "body_complete", "peer_closed",
+})
+
+
+class _PhaseDiagnostics:
+    """Bounded best-effort host observations, never canonical or model evidence.
+
+    Each component restarts its cumulative clock for every inference operation.
+    Samples from different components/operations must not be subtracted as one
+    span. An injected port may produce no observations; an empty list does not
+    certify that an HTTP request, local weights or a real model ran.
+    """
+
+    def __init__(self):
+        self._events = []
+
+    def observer(self, component):
+        if type(component) is not str or component not in {"transport", "provider"}:
+            _invalid()
+        phases = (_TRANSPORT_PHASES if component == "transport"
+                  else frozenset({"provider_parse_complete"}))
+
+        def collect(value):
+            # Four bounded inference operations, six transport phases and one
+            # provider phase each. Copy only exact primitive allowlisted fields.
+            if (len(self._events) >= 28 or type(value) is not dict
+                    or set(value) != _PHASE_FIELDS
+                    or type(value["event"]) is not str
+                    or value["event"] != "local_inference_phase"
+                    or type(value["phase"]) is not str or value["phase"] not in phases
+                    or type(value["elapsed_ms"]) is not int
+                    or not 0 <= value["elapsed_ms"] <= 120_000
+                    or type(value["timing_mode"]) is not str
+                    or value["timing_mode"] not in {"live", "injected_clock"}):
+                return
+            self._events.append({
+                "component": component, "event": "local_inference_phase",
+                "phase": value["phase"], "elapsed_ms": value["elapsed_ms"],
+                "timing_mode": value["timing_mode"],
+            })
+
+        return collect
+
+    def snapshot(self):
+        return [dict(event) for event in self._events]
 
 
 def _invalid():
@@ -31,7 +79,7 @@ def _invalid():
 def _host_selection(*, reports, authorized, confirmed, reports_confirmed,
                     upstream_egress_acknowledged, session_id, model, endpoint,
                     timeout_seconds, include_content, core_factory=None,
-                    port_factory=None, cancellation=None):
+                    port_factory=None, cancellation=None, phase_observer=None):
     if (authorized is not True or confirmed is not True or reports_confirmed is not True
             or upstream_egress_acknowledged is not True
             or type(session_id) is not str
@@ -43,6 +91,7 @@ def _host_selection(*, reports, authorized, confirmed, reports_confirmed,
             or type(reports) is not dict or not 1 <= len(reports) <= 3
             or (core_factory is not None and not callable(core_factory))
             or (port_factory is not None and not callable(port_factory))
+            or (phase_observer is not None and not callable(phase_observer))
             or (cancellation is not None and not isinstance(cancellation, Event))):
         _invalid()
     ensure_src_paths()
@@ -51,7 +100,7 @@ def _host_selection(*, reports, authorized, confirmed, reports_confirmed,
 
     # Both constructors are lexical/inert: no DNS, socket, stat or report read.
     # Even trusted test seams cannot bypass validation of the host destination.
-    transport = LocalChatHttpTransport(endpoint=endpoint)
+    transport = LocalChatHttpTransport(endpoint=endpoint, phase_observer=phase_observer)
     reader = LocalReportReader(dict(reports))
     return transport, reader
 
@@ -60,22 +109,36 @@ def analyze_local_reports(document, *, reports, endpoint, model, session_id,
                           authorized=False, confirmed=False, reports_confirmed=False,
                           upstream_egress_acknowledged=False, timeout_seconds=30,
                           include_content=False, core_factory=None, port_factory=None,
-                          cancellation=None, include_canonical_history=False):
+                          cancellation=None, include_canonical_history=False,
+                          include_phase_diagnostics=False, structured_tool_output=False,
+                          hermes_context=False):
     """Explicit host composition; input/model fields never select network targets.
 
     ``port_factory(endpoint, model)`` is a trusted injected-transport test seam,
     not live-model evidence. Default ``live`` means actual local socket I/O only.
     Native Core admission remains before any inference or selected report read.
+    Diagnostics are a separate host opt-in, never input/model-selected, and are
+    returned as content-free metadata rather than stored in canonical memory.
+    Structured output is another host opt-in for the default provider only:
+    request a phase-bound fixed schema, without trusting endpoint compliance.
+    Hermes context is a separate default-off wire replay experiment. It does
+    not import the Hermes loop, retrieve memory or change the native tool protocol.
     """
     try:
-        if type(include_canonical_history) is not bool:
+        if (type(include_canonical_history) is not bool
+                or type(include_phase_diagnostics) is not bool
+                or type(structured_tool_output) is not bool
+                or type(hermes_context) is not bool
+                or ((structured_tool_output or hermes_context) and port_factory is not None)):
             _invalid()
+        diagnostics = _PhaseDiagnostics() if include_phase_diagnostics else None
         transport, reader = _host_selection(
             reports=reports, endpoint=endpoint, model=model, session_id=session_id,
             authorized=authorized, confirmed=confirmed, reports_confirmed=reports_confirmed,
             upstream_egress_acknowledged=upstream_egress_acknowledged,
             timeout_seconds=timeout_seconds, include_content=include_content,
             core_factory=core_factory, port_factory=port_factory, cancellation=cancellation,
+            phase_observer=(diagnostics.observer("transport") if diagnostics else None),
         )
         if (type(document) is not dict or set(document) != {"schema_version", "query"}
                 or type(document["schema_version"]) is not str
@@ -96,6 +159,9 @@ def analyze_local_reports(document, *, reports, endpoint, model, session_id,
         if port_factory is None:
             port = ChatCompletionsInferenceProvider(
                 model=model, transport=transport, evidence_mode="live",
+                phase_observer=(diagnostics.observer("provider") if diagnostics else None),
+                structured_tool_output=structured_tool_output,
+                hermes_context=hermes_context,
             )
             expected_evidence = "live"
         else:
@@ -123,6 +189,17 @@ def analyze_local_reports(document, *, reports, endpoint, model, session_id,
             upstream_egress_possible=True, real_model_verified=False,
             local_weights_verified=False, account_used=False,
         )
+        if diagnostics is not None:
+            result.update(
+                phase_diagnostics=diagnostics.snapshot(),
+                phase_diagnostics_clock_scope="per_component_operation",
+            )
+        if structured_tool_output:
+            result.update(structured_output_requested=True,
+                          structured_output_schema="jarvis_tool_loop_v1")
+        if hermes_context:
+            result.update(hermes_context_requested=True,
+                          hermes_context_scope="adapted_text_replay")
         encoded = json.dumps(result, ensure_ascii=True, allow_nan=False)
         if len(encoded) > 262144 or redactor.redact(encoded)[1]:
             _invalid()
@@ -152,6 +229,21 @@ def main(argv=None):
     parser.add_argument("--timeout-seconds", type=float, default=30)
     parser.add_argument("--include-content", action="store_true")
     parser.add_argument(
+        "--structured-tool-output", action="store_true",
+        help=("Request the fixed local report-proposal JSON schema. Core still validates "
+              "all tools and citations; no JSON repair, retries or native tools."),
+    )
+    parser.add_argument(
+        "--hermes-context", action="store_true",
+        help=("Experiment with the pinned Hermes-derived text replay of canonical history "
+              "and current progress. No Hermes dispatcher or separate memory store."),
+    )
+    parser.add_argument(
+        "--include-phase-diagnostics", action="store_true",
+        help=("Return bounded content-free host phase samples; transport/provider "
+              "clocks are separate per operation, not proof of a real model."),
+    )
+    parser.add_argument(
         "--include-canonical-history", action="store_true",
         help="Send bounded same-subject/session canonical history to the selected server.",
     )
@@ -174,6 +266,9 @@ def main(argv=None):
         result = analyze_local_reports(
             read_review_input(), **options,
             include_canonical_history=args.include_canonical_history,
+            include_phase_diagnostics=args.include_phase_diagnostics,
+            structured_tool_output=args.structured_tool_output,
+            hermes_context=args.hermes_context,
         )
         print(json.dumps(result, ensure_ascii=True, allow_nan=False, sort_keys=True))
         return 0

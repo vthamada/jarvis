@@ -1,5 +1,16 @@
 # Technology Absorption Order
 
+Execução iniciada2026-10-20: fatia de replay de contexto Hermes pin0b8dee00
+reutilizada em opt-in, com comparador/executor e gate portátil. Não equivale
+ao loop Hermes completo nem a promoção. Estado de verificação e resultados no
+[runbook do experimento](../operations/hermes-context-comparison-2026-10-20.md).
+
+Direção ativa revisada em 2026-10-20 por solicitação do operador. Este documento
+é o norte de composição tecnológica; não é evidência de integração executada.
+As seções 1–3 e 6–8 atualizadas regem a seleção. As listas das seções 4–5 são
+referências por família, não uma fila que obrigue concluir toda a infraestrutura
+antes de entregar produto. A fila executável continua única.
+
 ## 1. Objetivo
 
 Este documento transforma o estudo tecnologico ampliado do JARVIS em uma
@@ -21,30 +32,145 @@ Ele nao substitui:
 Leitura correta:
 
 - este arquivo nao e permissao para importar stacks inteiras;
-- ele organiza a **ordem de traducao de padroes** para o JARVIS;
+- ele organiza reuso de código, adaptação e tradução de padrões para o JARVIS;
 - backlog micro continua vivendo em `docs/implementation/execution-backlog.md`.
 
 ---
 
 ## 2. Regra central
 
-O JARVIS absorve tecnologias em quatro niveis, sempre nesta ordem:
+O JARVIS absorve tecnologias por quatro formas, sem degraus obrigatórios:
 
-1. **padroes e primitivas**
-2. **adaptadores pequenos**
+1. **padrões, primitivas e código reutilizado com origem preservada**
+2. **adaptações pequenas de implementações existentes**
 3. **complementos controlados**
 4. **baseline de fase futura**
 
 Regra permanente:
 
-- o sistema absorve primeiro o **que ha de melhor** em uma tecnologia;
-- so absorve a tecnologia inteira quando isso for inevitavel e ainda assim
-  delimitado;
+- o sistema seleciona o que resolve melhor uma lacuna observada no conjunto,
+  não o que parece melhor isoladamente;
+- reuso direto ou adaptação devem ser considerados antes de reimplementar;
+  licença, acoplamento, manutenção e custo de atualização podem justificar
+  implementação própria, mas a justificativa deve ser concreta e curta;
+- adoção mais ampla exige demonstrar vantagem de custo total e integração,
+  preservar os contratos e explicitar a decisão arquitetural; não é automática;
 - nada externo assume identidade, memoria canonica, governanca final ou sintese
   soberana do nucleo.
 - a ordem de absorcao e viva: o estado da arte deve ser revisado periodicamente,
   e novas tecnologias podem ser classificadas como referencia, experimento,
   complemento controlado ou traducao promovivel conforme evidencia.
+
+### 2.1 Decisão crítica e alternativas
+
+Mandato do operador: extrair o melhor de projetos existentes e construir um
+JARVIS integrado capaz de superar referências. Recomendação de engenharia:
+composição seletiva orientada a tarefas, com uma base principal por
+responsabilidade. Trata-se de uma decisão de direção, ainda sem comparação
+executada que demonstre ser a melhor arquitetura para todas as tarefas.
+
+| Alternativa | Quando faz sentido | Risco ou limite | Decisão atual |
+| --- | --- | --- | --- |
+| Construir tudo internamente | Lacuna sem solução compatível ou diferencial necessário | Repetir trabalho e adiar utilidade | Exceção justificada por capacidade |
+| Adotar um agente existente como produto principal | Prioridade exclusiva de uso imediato com poucas diferenças | Migrar autoridade e manter um fork divergente | Alternativa válida, mas muda o produto/arquitetura e exige decisão explícita |
+| Composição seletiva sobre uma base coerente | Experiência própria, continuidade e várias capacidades integradas | Adaptação, compatibilidade e atualização têm custo real | Caminho recomendado para a visão do JARVIS |
+| Combinar vários frameworks completos no mesmo caminho crítico | Experimento delimitado com vantagem demonstrável | Contextos, memórias e loops duplicados; latência e diagnóstico | Não adotar como padrão |
+
+Uma base coerente não significa perpetuar o código atual. Se absorver uma
+implementação maior for mais simples e seguro do que manter a nossa, registrar
+essa alternativa e o custo de migração. Investimento passado não é critério de
+aprovação. A soberania é exercida por contratos e controle dos efeitos, não
+pela autoria de cada linha nem pela centralização física de todos os processos.
+
+A ambição de superioridade se traduz em melhores resultados nas tarefas do
+usuário. Não pressupõe vencer todos os agentes, modelos e benchmarks ao mesmo
+tempo. O modelo, o hardware, o contexto e os limites também afetam o resultado;
+um timeout local isolado não identifica um defeito exclusivo do harness.
+
+### 2.2 Regra prática de incorporação
+
+Para cada lacuna prioritária, usar o item e o runbook existentes, sem criar um
+registro paralelo de estados:
+
+1. Fixar tarefa, baseline, critério de sucesso e limites antes do experimento.
+2. Indicar o componente candidato, repositório, commit, arquivos, licença e
+   dependências transitivas relevantes; preservar atribuições ao reutilizar.
+3. Escolher reuso, adaptação ou implementação própria, justificando custo de
+   manutenção/atualização, compatibilidade e menor superfície necessária.
+4. Integrar uma fatia ponta a ponta em sandbox, com uma autoridade por função;
+   nenhum segundo store vira memória canônica nem um loop externo autoriza I/O.
+5. Executar testes funcionais e negativos, medir qualidade/latência/consumo e
+   esforço de integração, registrar falhas e comparar com o baseline elegível.
+6. Registrar decisão, limites e rollback. Promoção continua manual, pelos
+   contratos e registries existentes, incluindo `shared/technology_absorption.py`;
+   nenhuma regra de runtime é relaxada por este texto.
+
+O registro mínimo é: lacuna/tarefa -> origem e versão -> opção escolhida ->
+mudança e testes -> comandos/artefatos/resultados -> decisão e rollback.
+Referência, experimento, integração validada e ganho comparativo são evidências
+distintas. Um estudo pode terminar em rejeição ou decisão de não integrar.
+
+### 2.3 Evidência atual e próxima prova
+
+- O [piloto de conversa](../operations/structured-local-conversation-2026-10-20.md)
+  fechou uma comparação real de duas fontes; o segundo turno expirou e o
+  controle sem histórico não executou. Memória útil real segue não comprovada.
+- A [campanha existente](../operations/harness-mission-campaign.md) tem 25
+  missões sintéticas públicas e runner/grader, não comparação válida já
+  concluída contra Hermes nem prova de generalização ou tarefas privadas reais.
+- As avaliações de [ai-memory](../implementation/ai-memory-assessment-2026-10-20.md)
+  e [Harness2](../implementation/harness2-assessment-2026-10-20.md) são estudos;
+  não equivalem a capacidades integradas ou ganho de autoevolução.
+
+Primeiro experimento iniciado: uma fatia reaproveitada do Hermes no fluxo
+modelo -> Core -> leitura de relatórios -> observação -> continuação -> síntese.
+O commit foi fixado em0b8dee00; o acoplamento do loop completo motivou extrair
+replay de contexto, não importar o runtime. A arquitetura publicada sozinha
+não demonstrava essa extração; código e proveniência foram inspecionados. Não instalar
+Hermes globalmente, importar credenciais ou ativar suas ferramentas por padrão.
+
+Comparar o baseline JARVIS com a candidata adaptada sob o mesmo modelo, fontes,
+capabilities, hardware e orçamento de inferências/tempo. Contabilizar chamadas
+auxiliares, retries, compactação e estado de residência; diferenças inevitáveis
+devem ser declaradas. Cada lado usa seu protocolo interno documentado: não
+forçar o Hermes inalterado ao JSON proprietário do JARVIS nem atribuir ao
+Hermes original um resultado obtido apenas pela nossa candidata adaptada.
+
+O recorte de aceite tem três cenários: comparação de duas fontes; segundo
+turno com correção, restart e controle sem histórico; chamada proibida sem
+efeito externo. A recusa é exigida no cenário proibido, mas não conta como
+conclusão útil dos cenários permitidos. Conferir resposta final, memória,
+eventos e ausência de efeitos indevidos. Essa prova pequena fecha viabilidade,
+não superioridade estatística. Se houver sinal útil, ampliar na campanha
+existente com repetições, tarefas novas e revisão humana; o split público
+dev/probe não é holdout secreto. Limiares de ganho e regressão devem ser fixados
+antes dessa ampliação, com todos os resultados incluídos.
+
+No teste de memória, o segundo pedido não deve repetir o fato/preferência a
+recordar, nem escondê-lo nas novas fontes. O controle difere apenas pela
+ausência do histórico e não deve inventar essa informação. Transportar um par
+canônico até o modelo sem resposta útil não satisfaz o aceite de memória.
+
+Na primeira comparação inválida por transporte, contrato ou recurso, classificar
+a causa antes de acrescentar candidatos ou alterar prompts sucessivamente.
+Se o reuso exigir importar outro cérebro ou infraestrutura desproporcional,
+registrar a rejeição e tentar uma primitiva menor. O próximo recorte e sua
+sequência ficam no [backlog micro](../implementation/execution-backlog.md).
+
+### 2.4 Referências e alcance da recomendação
+
+Fontes primárias consultadas em 2026-10-20:
+
+- [Arquitetura do Hermes](https://hermes-agent.nousresearch.com/docs/developer-guide/architecture):
+  documenta separação entre loop, contexto, providers, ferramentas e estado.
+  É evidência de desenho publicado, não prova local de extração ou desempenho.
+- [Building effective agents, Anthropic](https://www.anthropic.com/engineering/building-effective-agents):
+  recomenda complexidade proporcional ao ganho, atenção ao custo/latência e
+  compreensão das abstrações. Não afirma que nossa composição específica vencerá.
+
+A escolha por composição seletiva é inferência de engenharia aplicada à visão
+e às restrições locais, não uma conclusão experimental desses projetos. As
+fontes são vivas; qualquer código incorporado exige pin próprio no experimento.
 
 ---
 
@@ -54,12 +180,12 @@ Uma tecnologia sobe na ordem quando combina:
 
 - forte aderencia ao gap atual do JARVIS;
 - traducao pequena e reversivel;
-- ganho claro de robustez ou profundidade;
+- ganho observável de utilidade, robustez ou profundidade no fluxo completo;
 - baixo risco de terceirizacao do nucleo.
 
 Uma tecnologia desce na ordem quando:
 
-- resolve um problema mais de produto do que de nucleo;
+- não atende uma tarefa prioritária ou um risco concreto do fluxo atual;
 - exige importar plataforma demais para colher valor pequeno;
 - pressupoe uma fase que o JARVIS ainda nao abriu;
 - traz mais superficie do que necessidade real.
@@ -389,9 +515,15 @@ Regra:
 
 ## 6. Traducao para backlog
 
-A ordem acima vira backlog assim:
+A prioridade começa pela tarefa útil e pela lacuna demonstrada. As ondas acima
+são um mapa de referências, não uma obrigação de abrir itens para cada projeto.
+A direção de 2026-10-20 substitui a leitura de que todas as fundações precisam
+estar completas antes de uma experiência de produto ser entregue.
 
-- **Onda 1** gera itens `ready` e `blocked` no backlog micro atual;
+O mapa vira backlog assim:
+
+- **Onda 1** oferece candidatos ao backlog micro; só entram em `ready` após
+  Definition of Ready e escolha da tarefa, sem abertura automática por projeto;
 - **Onda 2** gera itens `blocked` ou `deferred`, dependendo da maturidade do
   baseline;
 - a abertura de qualquer item da Onda 2 deve usar tambem a matriz formal de
@@ -402,9 +534,9 @@ A ordem acima vira backlog assim:
 
 Regra pratica:
 
-- backlog de absorcao significa backlog de **traducao disciplinada**;
-- cada item deve dizer explicitamente qual padrao sera traduzido e em qual
-  camada do JARVIS;
+- backlog de absorção inclui **reuso efetivo, adaptação e tradução disciplinada**;
+- cada item deve dizer qual comportamento melhora, o componente/código
+  candidato e a camada do JARVIS, com aceite ponta a ponta;
 - nenhum item deve ser escrito como "adotar tecnologia X".
 
 ---
@@ -428,20 +560,14 @@ Leitura conjunta recomendada:
 
 ## 8. Conclusao
 
-O JARVIS nao precisa adotar mais tecnologia.
+A direção é entregar tarefas úteis completas usando a combinação mais simples
+de componentes que satisfaça a visão e os contratos do JARVIS. Reuso de código
+é uma ferramenta concreta; construir internamente exige motivo, assim como
+importar uma dependência. Aumentar o número de tecnologias não é objetivo.
 
-Ele precisa:
-
-- absorver primeiro o que aumenta profundidade do nucleo;
-- manter radar vivo para novas tecnologias sem transformar novidade em permissao
-  de adocao apressada;
-- deixar produto, gateway e superfices amplas para depois;
-- usar algoritmos de autoaperfeicoamento como laboratorio, nao como permissao
-  para desgovernar o sistema.
-
-Em resumo:
-
-- a ordem correta de absorcao e primeiro **contrato, memoria viva, memoria
-  procedural, workflow stateful e evolucao por metrica**;
-- depois **hubs de tools, graph memory, coding/browser substrates e automacoes**;
-- e so muito depois **product surfaces amplas e auto-modificacao forte**.
+O próximo investimento prioritário é conversa útil com ferramentas e memória,
+com uma fatia reaproveitada comparada ao baseline. Voz, Web, browser, code e
+integrações avançam por jornadas verificáveis, sem depender de completar todas
+as famílias deste catálogo. Autoevolução só demonstra valor quando melhora
+resultados em comparação controlada e permite rollback; esta direção não
+autoriza automodificação do núcleo ou promoção automática.

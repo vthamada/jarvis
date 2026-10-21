@@ -1,5 +1,119 @@
 # Execution Backlog
 
+## Direção ativa e próximo recorte — 2026-10-20
+
+Atualização da execução: operador autorizou iniciar o experimento Hermes,
+comparar baseline e resolver gate, com frentes independentes em paralelo.
+Este é o WIP integrado atual; o recorte anterior fica com seus aceites registrados,
+sem promover REA, memória real ou MB236. Ownership: package/proveniência Hermes,
+runner/grader comparativo e portabilidade do gate em três agentes; root integra
+provider/CLI, verifica e serializa qualquer campanha local. Código extraído de
+replay de contexto é candidato, não substituição do loop/Core. Status in_progress.
+Experimento implementado e executado: standard11904passed/124skips/0falhas;
+piloto real6tentativas,3por braço, ambos Corecompleted/2fontes, mas ambos
+seed reprovados por preferência/layout. Memória/controle não executados;
+candidata permanece default-off, sem vantagem demonstrada. Revisão humana
+confirmou fatos12itens/180ms corretos; a reprovação numérica deriva do layout.
+Evidência: [runbook Hermes](../operations/hermes-context-comparison-2026-10-20.md).
+O WIP de conversa/memória permanece aberto. Próximo recorte dentro dele:
+investigar intenção/formato da query versus autoridade no prompt nativo e
+síntese Core legível (prefácio interno2637chars observado), com testes de
+preferência e recusa de ampliação de escopo. Não atribuir causalidade ainda.
+Só depois novo aceite seed e campanha nova de memória/restart/controle.
+O plano abaixo antecede a execução e continua como critério de aceite.
+
+O operador explicitou que o JARVIS deve absorver código e capacidades de vários
+projetos para uma experiência integrada superior, não reconstruir tudo nem
+virar clone de um único agente. O norte e a avaliação crítica estão em
+[Technology Absorption Order](../architecture/technology-absorption-order.md).
+Essa decisão altera o critério de escolha, não promove capacidade ou encerra WIP.
+
+Estado técnico mais recente, que prevalece sobre as notas antigas abaixo:
+standard Windows11712 passed/124 skipped/zero falhas na rodada anterior;
+último piloto real concluiu uma comparação de duas fontes, mas a finalização
+do segundo turno expirou e o controle não rodou. Memória útil real permanece
+aberta; detalhes no [runbook](../operations/structured-local-conversation-2026-10-20.md).
+Esses resultados são históricos, não verificações novas desta decisão.
+
+Próximo recorte planejado de F01/F02/F03: experimentar reuso efetivo de uma
+fatia Hermes para continuação do loop, preservando o Core. Ainda não iniciado;
+não é novo MB fechado nem outra fila `ready`, e não depende de desbloquear MB236.
+
+- Entrada: baseline local e seam de ferramentas existentes; fixar commit,
+  arquivos e licença Hermes, verificar dependências e escolher a menor extração.
+- Implementação: candidata isolada/default-off no fluxo modelo/Core/leitura/
+  observação/continuação/final, com eventos e memória canônica nativos; código
+reaproveitado atribuído, sem instalar agente global ou importar credenciais.
+- Aceite local: testes de slice e ponta a ponta para duas fontes, falha de
+  ferramenta/protocolo, limites, recusa pre-I/O e final/restart exatos.
+- Aceite de utilidade: comparação pareada sob modelo/recursos/orçamento iguais;
+  segunda interação corrigida após restart e controle sem histórico. Respostas
+  scripted validam integração, não qualidade do modelo nem memória útil real.
+- Evidência: comandos/artefatos, todas as tentativas, sucesso/falhas, latência,
+  consumo e custo de integração; resultado negativo ou inconclusivo é válido.
+- Gate mínimo: standard; para promoção, exigir ambos os aceites acima, decisão
+  explícita e rollback default-off sem apagar stores ou alterar contratos.
+- Limite: nenhuma nova inferência, instalação, migração, commit/push ou
+  substituição arquitetural foi executada nesta rodada de direção.
+
+WIP integrado continua único. Fechar ou replanejar explicitamente o recorte
+atual antes de ativar o seguinte; sem campanhas concorrentes sobre a mesma
+conta/modelo/store. Desenvolvimento paralelo futuro só em superfícies disjuntas.
+As seções seguintes preservam a política e o histórico da fila.
+
+Atual2026-10-20: opt-in provider/CLI sem mudar Core/InferenceRequest. Primeira
+versao passou standard Windows11649/124skips/zero falhas, mas piloto1call foi
+recusado observation_required antes de reads (final prematura). Agora schemas
+fixos por fase/host passaram396 focados e standard11695/124skips/zero falhas.
+Dois novos ensaios2calls/cada encerraram com1read/finalaceita mas comparacao
+incompleta; memoria real nao provada. Agora hint opt-in prioriza recomendacao
+host read_unread_report sem novo Coreguard;376 focados verdes, gate pendente. User
+autoriza chamadas Qwen locais sinteticas sem teto global; proximo ensaio tem
+teto voluntario10/3bracos, stopfirst/semretry/warmup/OAuth/API paga. Ainda sem
+chamadas da nova prioridade; memoria util real continua pendente.
+Runbook: docs/operations/structured-local-conversation-2026-10-20.md.
+Continuidade anterior abaixo e historica.
+
+Continuidade 2026-10-20: WIP integrado in_progress. Correcoes test-only de espera/
+cleanup/binding passaram em145 testes; CLI de diagnostico opt-in e memoria HTTP
+com controle passaram em132 testes. Respostas scripted, nao modelo homologado.
+Regressao CLI adicional42 passed; standard integral11591 passed/124 skipped,
+zero falhas/errors.17 hashes Python e inventario inalterados durante o gate.
+Novo piloto autorizado max9:1 chamada Qwen concluida em24,14s, mas Core recusou
+invalid_model_message antes de ferramentas, zero reads/analise aceita. Codigo
+confirmado nos eventos canonicos; variante textual nao recuperavel sem raw.
+Parou sem retry; segundo turno
+e controle nao executados,8chamadas nao usadas nao autorizam nova tentativa.
+Conversa util com modelo real continua a prioridade;
+proximo aceite e aderencia ao protocolo de ferramentas, sem JSONrepair ou
+guardas relaxadas; nao atribuir a variante exata a um palpite de prompt/schema.
+Harness2 somente viabilidade do adapter e REA nativo somente inventario readonly.
+Runbook: docs/operations/conversation-gate-reliability-2026-10-20.md.
+O recorte abaixo registra a verificacao anterior, nao o novo aceite global.
+
+### Recorte integrado REA e diagnostico local - 2026-10-20
+
+- Estado: in_progress, WIP integrado unico; standard da rodada falhou, sem aceite.
+- Pedido: absorver capacidades REA, analisar OpenMausBot e continuar frentes
+  independentes com multiagentes; sem nova campanha de modelo ou publicacao.
+- Entrega local: apps.jarvis_rea importa Evidence JS estatico por projecao
+  limitada/review/Core/governanca/memoria; transporte/provider local oferecem
+  phase_observer default-off, sem conteudo e sem alterar framing/EOF/guards.
+- Evidencia: RED de APIs ausentes e coverage contraditorio;257 REA/source-review
+  e327 inferencia/HTTP passaram. Standard exit1/11689 coletados/duas falhas;
+  repeticao dos dois arquivos sem mudancas:66 passed/246,14s, causa inconclusiva.
+- Absorcao parcial: fork00a055be/6.7.0 fixado, sem dependencia central nova.
+  Executor externo nao conectado; apos2builds recusados, compileoffline e2provas
+  REA reais/Core/SQLite/restart demonstraram admissao com DEFER nativo, sem
+  executaralvo ou relaxarTLS/guards. Sem novo standard verde ou fechamento.
+- Estudo OpenMausBot1db45cab concluido: referencia F05/F06/F09/F10; sem copiar
+  codigo, contas, enterprise ou delegar sintese/autoridade ao agente externo.
+- Proximo aceite: utilidade REA selecionada e dispatch governado antes I/O.
+  Outros backends exigem slices/licencas/provas. Harness2 pin1cfe254e estudado
+  como laboratorio F04/T02, sem executar ou promover runtime.
+- Rollback: nao invocar bridge e omitir phase_observer; nao apagar stores.
+- Runbook: docs/operations/rea-static-evidence-and-local-phase-timing.md.
+
 ## 1. Objetivo
 
 Este documento e a fila micro soberana de execucao do corte ativo.

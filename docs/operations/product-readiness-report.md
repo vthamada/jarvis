@@ -1,5 +1,37 @@
 # Inventário atual de prontidão do produto
 
+Recorte atual2026-10-20: --hermes-context default-off e executor comparativo
+implementados, sem mudar estados macro. Replay de contexto reutilizado não é
+loop Hermes completo, segundo store ou promoção de qualidade. Gate global
+aprovado11904passed/124skips/0falhas. Piloto real6tentativas fechou os dois
+loops/2fontes, mas ambos falharam preferência/layout seed; memória/controle não
+executados, sem vantagem demonstrada. Resultados e próximos recortes no
+[runbook Hermes](hermes-context-comparison-2026-10-20.md).
+
+Atual2026-10-20: schemas locais opt-in por progresso implementados, default-off,
+sem alterar Core/parser/limites.376 focados e standard Windows11712 passed/
+124 skipped/zero falhas/errors;20 hashes Python e inventario sem drift no gate.
+Cinco ensaios Qwen somam14tentativas/12respostas: ultimo fechou1comparacao de
+duas fontes, mas segundo turno com historico e fontes novas estourou120s na
+finalizacao. Controle real nao executado; memoria util ainda nao comprovada.
+Latencia permanece lacuna, sem causalidade demonstrada. Sem retry/warmup/OAuth/
+API paga ou promocao macro/MB236. Nenhuma inferencia em curso. Runbook:
+docs/operations/structured-local-conversation-2026-10-20.md.
+Estudo aditivo ai-memory pin5519b89c: util para FTS/RRF/context packing/handoffs,
+nao substituto do canonico. Sem instalar/executar/integrar. Plano experimental:
+docs/implementation/ai-memory-assessment-2026-10-20.md.
+Registros abaixo sao historicos.
+
+Atualizacao2026-10-20: importador REA estatico e diagnostico local de fases
+default-off implementados;257 testes de fonte/Core e327 inferencia/HTTP passaram.
+ForkREA00a055be compiladooffline e executado sem rede em dois JS sinteticos;
+Core/SQLite/restart registraram final1717/3eventos com DEFER nativo, nao despacho
+governado. Standard exit1/11689 coletados/duas falhas; repeticao dos dois arquivos
+sem mudancas:66 passed, causa inconclusiva. WIP in_progress, sem standard verde.
+OpenMausBot1db45cab eHarness2 1cfe254e analisados como referencias distintas,
+sem instalar/executar/promover. MB236 e estados macro iguais. Runbook:
+[REA e fases locais](rea-static-evidence-and-local-phase-timing.md).
+
 Continuidade 2026-10-18: loop com progresso/instrucoes por fase; segundo turno
 contextual provado em fixture sobre Core/SQLite/restart reais. Piloto Qwen novo
 parou na4a tentativa por timeout,3 concluidas/3reads, sem segundo turno/controle.
