@@ -33,6 +33,7 @@ include-package-data = true
 
 [tool.setuptools.package-data]
 "apps.jarvis_web" = ["*.html", "*.css", "*.mjs"]
+"apps.jarvis_hermes" = ["LICENSE", "PROVENANCE.md"]
 
 [tool.setuptools.packages.find]
 where = [

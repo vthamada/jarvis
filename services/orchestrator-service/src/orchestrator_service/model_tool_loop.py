@@ -1,7 +1,8 @@
 """Opt-in Core composition for one bounded, host-selected read-only tool.
 
 This is not a general executor, credential broker, scheduler or recovery ledger.
-The provider receives only the current query, resource IDs and observed text.
+The provider receives the current query, resource IDs and observed text, plus
+bounded same-subject/session canonical history only under a separate host opt-in.
 """
 
 from __future__ import annotations
@@ -17,6 +18,7 @@ from typing import Callable
 from operational_service.adapters.local_report_reader import LocalReportReader
 from synthesis_engine.generative_analysis import _SENSITIVE_INPUT
 
+from orchestrator_service.canonical_history import select_canonical_history
 from shared.model_inference import ModelInferencePort
 from shared.model_tool_loop import (
     ToolAuthorization,
@@ -43,6 +45,7 @@ class ModelToolLoopConfig:
     max_tool_calls: int = 3
     cancellation: Event | None = field(default=None, repr=False)
     clock: Callable[[], float] = field(default=time.monotonic, repr=False)
+    include_canonical_history: bool = False
 
     def __post_init__(self):
         for value in (self.model, self.expected_provider_id):
@@ -58,6 +61,7 @@ class ModelToolLoopConfig:
                 or not 0 < self.timeout_seconds <= 120
                 or type(self.max_tool_calls) is not int or not 1 <= self.max_tool_calls <= 3
                 or (self.cancellation is not None and not isinstance(self.cancellation, Event))
+                or type(self.include_canonical_history) is not bool
                 or not callable(self.clock)):
             raise ValueError("invalid_tool_loop_configuration")
 
@@ -68,6 +72,7 @@ def _config_binding(config):
         config.reader.configuration_fingerprint, tuple(config.reader.resource_ids),
         config.expected_provider_id, config.expected_evidence_mode,
         config.timeout_seconds, config.max_tool_calls, id(config.cancellation), id(config.clock),
+        config.include_canonical_history,
     )
 
 
@@ -93,6 +98,7 @@ def run_core_tool_loop(core, config, contract, value, *, emit):
         configuration = _config_binding(config)
         execution_deadline = time.monotonic() + config.timeout_seconds
         engine, governance = core.synthesis_engine, core.governance_service
+        memory, repository = core.memory_service, core.memory_service.repository
 
         def binding():
             # Hashes bind private identity; they do not anonymize it. They never
@@ -104,15 +110,12 @@ def run_core_tool_loop(core, config, contract, value, *, emit):
             ).encode("ascii")).hexdigest()
 
         selected_binding = binding()
-        context = ToolLoopContext(
-            request_id=str(contract.request_id), query=contract.content,
-            binding_id=selected_binding, resource_ids=tuple(config.reader.resource_ids),
-        )
 
         def eligible():
             return (
                 core.model_tool_loop is config
                 and core.synthesis_engine is engine and core.governance_service is governance
+                and core.memory_service is memory and memory.repository is repository
                 and _config_binding(config) == configuration
                 and binding() == selected_binding
                 and engine.model_tool_loop_eligible(value)
@@ -131,6 +134,57 @@ def run_core_tool_loop(core, config, contract, value, *, emit):
                 return None
             except Exception:
                 return "context_changed"
+
+        def interruption():
+            code = validate_publication()
+            if code is None:
+                return None
+            return ToolLoopOutcome(
+                status=code if code in {"cancelled", "timed_out"} else "refused",
+                error_code=code,
+            ), None
+
+        history = ()
+        if config.include_canonical_history:
+            stopped = interruption()
+            if stopped is not None:
+                return stopped
+            # This is a known-subject local composition, not authentication.
+            # Never fall back to a session summary or a differently bound user.
+            if (type(contract.user_id) is not str or not contract.user_id.strip()
+                    or contract.user_id != contract.canonical_user_ref):
+                return withheld("history_scope_denied")
+            try:
+                rows = repository.fetch_recent_turns(str(contract.session_id), 6)
+            except Exception:
+                return ToolLoopOutcome(status="failed", error_code="history_unavailable"), None
+            stopped = interruption()
+            if stopped is not None:
+                return stopped
+            try:
+                history = select_canonical_history(
+                    rows, subject_id=contract.user_id, session_id=str(contract.session_id),
+                )
+            except Exception:
+                return ToolLoopOutcome(status="failed", error_code="history_unavailable"), None
+            stopped = interruption()
+            if stopped is not None:
+                return stopped
+            emit("model_tool_loop_history_selected", {
+                "inspected_count": len(rows), "selected_count": len(history),
+                "excluded_count": len(rows) - len(history),
+                "character_count": sum(len(item.query) + len(item.response) for item in history),
+                "authority": "none",
+            })
+            stopped = interruption()
+            if stopped is not None:
+                return stopped
+
+        context = ToolLoopContext(
+            request_id=str(contract.request_id), query=contract.content,
+            binding_id=selected_binding, resource_ids=tuple(config.reader.resource_ids),
+            history=history,
+        )
 
         def authorize(call: ToolCall):
             fingerprint = call_fingerprint(context, call)
@@ -182,12 +236,19 @@ def run_core_tool_loop(core, config, contract, value, *, emit):
                 fingerprint=fingerprint, text=text,
             )
 
+        stopped = interruption()
+        if stopped is not None:
+            return stopped
+        remaining = execution_deadline - time.monotonic()
+        if remaining <= 0:
+            return ToolLoopOutcome(status="timed_out", error_code="timed_out"), None
         outcome = run_tool_loop(
             config.port, model=config.model, context=context,
             authorize=authorize, execute=execute, eligible=eligible, emit=emit,
             expected_provider_id=config.expected_provider_id,
             expected_evidence_mode=config.expected_evidence_mode,
-            timeout_seconds=config.timeout_seconds, max_tool_calls=config.max_tool_calls,
+            timeout_seconds=min(config.timeout_seconds, remaining),
+            max_tool_calls=config.max_tool_calls,
             cancellation=config.cancellation, clock=config.clock,
         )
         if not eligible():

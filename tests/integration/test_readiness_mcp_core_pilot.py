@@ -239,7 +239,9 @@ def test_expired_report_entry_does_not_dispatch_core(tmp_path, monkeypatch):
 
     monkeypatch.setattr(pilot, "_isolated_core", build)
     result = asyncio.run(pilot.run_readiness_mcp_core_pilot(**values))
+    assert result.status == "refused"
     assert result.reason == "report_entry_cancelled_or_expired"
+    assert result.memory_record_id is None and result.final_text is None
 
 
 @pytest.mark.parametrize("change", [
@@ -251,16 +253,28 @@ def test_expired_report_entry_does_not_dispatch_core(tmp_path, monkeypatch):
 def test_core_identity_grant_or_final_drift_cannot_be_attested(tmp_path, monkeypatch, change):
     values = options(tmp_path)
     original = pilot._isolated_core
+    mutated = []
+    # Target response binding, not wall-clock startup. Keep the actual client
+    # and asyncio deadlines intact, and exercise expiry in the dedicated test.
+    monkeypatch.setattr(pilot, "time", SimpleNamespace(monotonic=lambda: 0.0))
 
     def build(runtime):
         core = original(runtime)
         handle = core.handle_input
-        core.handle_input = lambda contract: replace(handle(contract), **change)
+
+        def mutate(contract):
+            response = handle(contract)
+            mutated.append(change)
+            return replace(response, **change)
+
+        core.handle_input = mutate
         return core
 
     monkeypatch.setattr(pilot, "_isolated_core", build)
+    result = None
     with pytest.raises(ValueError, match="core_final_binding_refused"):
-        asyncio.run(pilot.run_readiness_mcp_core_pilot(**values))
+        result = asyncio.run(pilot.run_readiness_mcp_core_pilot(**values))
+    assert mutated == [change], result
 
 
 @pytest.mark.parametrize("failure", ["memory", "events", "restart_memory", "restart_events"])

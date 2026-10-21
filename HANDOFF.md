@@ -1,5 +1,306 @@
 # HANDOFF
 
+## Publicação solicitada — 2026-10-20
+
+Operador autorizou commit e push de todas as54alterações pendentes para
+codex/publish-canonical-history-continuation-2026-10-18, sem merge para main.
+Escopo: experimento Hermes, integração REA, protocolo estruturado/diagnósticos
+locais, correções do gate, estudos e documentação das rodadas pendentes.
+Conferência pré-commit confirmou37arquivos de código/configuração/licença
+idênticos ao freeze03 do standard aprovado:11904passed/124skipped/0falhas/errors.
+Artefatos privados, stores, modelos, credenciais e gravações permanecem fora
+do commit. Publicação não promove a candidata ou comprova memória: o piloto
+real encerrou no seed reprovado, conforme o registro da rodada abaixo.
+
+## Experimento Hermes e gate portátil — 2026-10-20
+
+Operador autorizou experimento concreto, comparação com baseline e resolução do
+gate, com multiagentes. WIP integrado atual replanejado para F01/F02/F03/T02;
+MB236 continua independente/blocked. Três frentes disjuntas: replay/proveniência
+Hermes, runner/grader/E2E e portabilidade do gate; root integra provider/CLI,
+executor local reproduzível e campanhas. Trabalho pendente anterior preservado.
+
+Fatia real Hermes pin0b8dee00: composição/substituição de contexto e wire copy,
+não loop completo, native tool calling ou dispatcher. Novo --hermes-context
+default-off, schema de fase pelo JSON original, mesmo Core/prazos/citações e
+memória canônica; sem store, dependência central ou reparo/retry novos. MIT
+preservado e incluído em package-data; wheel offline não validado por ausência
+de setuptools.build_meta após corrigir o TEMP do build; nada instalado.
+
+Comparador/executor local usa corpus9024e8fb e duas configurações, seed/memória/
+controle, snapshots iguais e readback/export exatos. Teto24tentativas,4por turno,
+120s; cada braço para na primeira falha, outro braço não é retry. Default
+preflight é inerte; execução exige flags explícitas. Modelos/contas não são
+descobertos/iniciados. Ordem fixa/defaults de geração e residência não controlados;
+não permite alegar ganho causal/superioridade geral. Recusa proibida fica em
+teste scripted separado. Revisões corrigiram falsos positivos do grader antes
+de qualquer inferência real.
+
+Primeiro ajuste do gate introduziu regressão ao colocar temporários no workspace:
+runtime privado corretamente recusou ROOT. Standard interrompido, não aprovado;
+29testes inalterados de canonical mission/conta passaram fora do repositório.
+Correção passou28testes, incluindo runtime canônico original; usa raiz UUID no
+TEMP do sistema fora de ROOT, com pai
+privado explícito opcional. Mantém checks, TEMP/TMP/TMPDIR por subprocesso sem
+exclusão preexistente/globalenv, recusa PYTEST_ADDOPTS herdado e JUnit fora do
+basetemp. Permissão de sockets do executor é separada, sem bypass no código.
+Standard02 concluiu reprovado:11901passed/2failed/124skipped/0errors,2115,180s.
+As duas falhas de mojibake são causadas pelo prefixo .tmp_ no run-root, que faz
+o scanner ignorar ancestrais das fixtures. Nome corrigido para
+jarvis-engineering-gate-UUID;29testes verdes/23,99s incluem os dois casos
+originais e missão canônica. Scanners/exclusões intactos. Freeze03 mudou somente
+gate e testes do gate; standard03 aprovado:11904passed/124skipped/0failed/
+0errors,2052,195s JUnit.37hashes e conjunto de arquivos iguais a freeze03 após
+o gate. Campanha real Qwen encerrada em diretório novo:6tentativas/3por braço,
+sem retry/warmup/OAuth/API paga. Ambos Corecompleted/2observações, final canônica
+exata em restart/export, mas ambos seed reprovados por formato/preferência.
+Fatos12itens/180ms corretos na revisão humana; check numérico depende do layout.
+Baseline declarou preferência indisponível; candidata omitiu label. Memória e
+controle não executados conforme stopfirst, nenhum snapshot criado. Tempos
+73,172s/46,281s não permitem ganho causal por ordem/cache/defaults não controlados.
+Candidata permanece default-off; nenhuma promoção de qualidade.
+Runbook:
+docs/operations/hermes-context-comparison-2026-10-20.md. Nenhum commit/push/merge.
+
+Verificação integrada root:670passed/149,81s e211inventário/contratos/48,12s,
+zero falhas.37arquivos de código/configuração/licença/proveniência congelados
+por hash para o primeiro standard interrompido; correção congelada em freeze02,
+segundo standard concluído com duas falhas descritas acima.
+Gate global aprovado acima. Experimento encerrado com resultado parcial; WIP
+de conversa/memória segue aberto. Próximo recorte: investigar tensão entre
+query/intenção/formato e autoridade no prompt nativo (causa não isolada), além
+da síntese visível com prefácio interno2637chars. Só depois novo aceite seed e
+campanha independente de memória/controle. Detalhes e limites no runbook.
+Auditoria read-only confirmou contagens, final SQLite e17artefatos sem alteração.
+Quick pós-campanha aprovado;37hashes/conjunto iguais a freeze03, diffcheck limpo.
+Nenhuma alteração Python/JSON/TOML após standard; mudanças finais só documentais.
+
+## Direção de composição tecnológica — 2026-10-20
+
+Operador pediu que absorver o melhor de projetos existentes deixe de ser apenas
+conversa e vire norte, prática e evidência, com avaliação crítica da estratégia.
+Visão explicitada no Documento-Mestre §3.1; estratégia existente
+docs/architecture/technology-absorption-order.md revisada, sem documento de visão
+paralelo. Reuso/adaptação de código passam a ser opções reais antes de reescrita;
+não há escada obrigatória de padrões primeiro ou inferioridade automática de
+problemas de produto. AGENTS/README/mapa mestre/fila única apontam a direção.
+
+Recomendação: composição seletiva guiada por tarefa, uma base por responsabilidade
+e melhoria medida no conjunto. Não promessa de superar todos, nem vários agentes
+como cérebros concorrentes; Core/memória/governança/síntese seguem soberanos.
+Código atual pode ser substituído com evidência; custo já investido não o protege.
+Alternativas, custo de manutenção, pin/licença, comparação e rollback registrados.
+
+Próximo recorte planejado: fatia de loop Hermes reaproveitada/default-off contra
+baseline, com duas fontes, memória corrigida/restart/controle e recusa pre-I/O.
+Ainda sem pin/extração/instalação/execução ou ganho comprovado; não novo MB ready.
+WIP1 preservado; replanejar/fechar atual antes de ativar seguinte. MB236 e estados
+macro intactos. Esta rodada altera somente documentos/instruções; sem inferência,
+credenciais, runtime novo ou publicação. Quick (encoding/guardrails/Ruff) passou;
+23 links locais em7documentos existem; diff --check passou. Standard tentou a
+suíte, encontrou erros de setup e foi interrompido, não aprovado. Reprodução
+isolada do primeiro caso falhou ao criar diretório numerado no TEMP do sandbox;
+o mesmo teste passou com basetemp único no workspace (1passed/aviso de cache).
+Não atribuir todos os erros do gate a essa causa sem reexecução integral.
+11 testes focados de guardrails/gate/absorção passaram; nenhuma nova inferência.
+Hashes dos arquivos Python/JSON pendentes permanecem iguais aos do início.
+Não confundir essa verificação parcial com o standard11712/124skips histórico
+registrado abaixo; o gate global novo permanece não concluído.
+
+## Qwen, memoria e estudo ai-memory - continuidade 2026-10-20
+
+Opt-in structured_tool_output/--structured-tool-output implementado: tres schemas
+fixos por fase; quando Core recomenda read_unread_report, mixed vira read-only.
+Default-off e Core/parser/governanca/memoria/sintese/limites permanecem intactos.
+Hint nao garante recurso novo nem cobertura; backend pode ignora-lo sem novo
+guard nativo. Testes cobrem esse contraste, fences e tres CLIs/restart/controle.
+REDs antes dos fixes;376 focados/146,20s e standard Windows11712 passed/
+124 skipped/zero falhas/errors,11836 coletados/2527,353s pytest.20 hashes Python
+e inventario permaneceram identicos durante gate. Docker daemon indisponivel,
+sem reset/build; testes foreground conforme autorizacao anterior.
+Depois da sincronizacao documental: quick e256 testes inventario/MCP/guardrails
+aprovados/52,72s. Sem edits Python posteriores ao standard.
+
+User ampliou autorizacao Qwenlocal/sinteticos sem teto global; ensaios ficaram
+limitados voluntariamente10cada, sem warmup/retry/repair/OAuth/API paga ou prazo
+maior. Total5ensaios/14tentativas/12respostas completas. Evolucao: final prematura,
+comparacao incompleta, depois duas fontes lidas mas finaltimeout. Ultimo ensaio
+com residencia declarada via GET fechou1comparacao util/2fontes/3calls e final
+3719chars exata. Segundo turno transportou1par canonico, leu duas revisoes,
+mas final expirou no prazo120s: nenhum aceite de memoria; controle nao rodou.
+Todos pararam na primeira falha e preservaram bancos/logs, sem saldos reutilizados.
+Causa da latencia98s nao isolada. Nenhuma inferencia nova em curso.
+Runbook: docs/operations/structured-local-conversation-2026-10-20.md.
+
+Pedido aditivo ai-memory analisado por tres agentes (arquitetura, seguranca/evals
+e fit local), root revisou fontes primarias. Pin5519b89c/v3.1.2. Recomendacao:
+FTS/RRF/context packing e handoffs, via projecao derivada/reidratacao canonica;
+nao importar wiki como autoridade, hooks/backfill ou autoapproval. Estudo estatico,
+sem clone/install/execucao/integracao/conta. Detalhes e experimentos propostos:
+docs/implementation/ai-memory-assessment-2026-10-20.md.
+
+MB236/estados macro preservados; conversa ampla e memoria real continuam abertas.
+Sem commit/push/merge. Registros abaixo sao historicos, nao o estado atual.
+
+## Conversa com memoria e confiabilidade do gate - continuidade 2026-10-20
+
+Tres agentes independentes: testes do gate, diagnostico/conversa e viabilidade
+Harness2; root revisa e executa. Os dois mecanismos de falha dos testes foram
+reproduzidos deterministicamente: join20 recusa trabalho valido dentro do ticket
+120; expiracao pre-Core faz teste de binding nao atingir a adulteracao. Correcao
+somente nos testes: espera pelo contrato publico, cleanup finally e clock local
+isolado no teste de binding com mutator atingido.145 testes servico/MCP passaram;
+nao e prova da branch exata do gate historico. Producao/deadlines/guards intactos.
+CLI local agora oferece --include-phase-diagnostics default-off: ate28 metadados
+allowlisted sem conteudo ou persistencia.132 testes de conversa/diagnostico
+passaram, incluindo HTTP/SQLite/restart reais, segundo turno contextual e controle
+sem historia, com9respostas scripted. Nao e prova de qualidade de modelo real.
+Regressao CLI adicional42 passed/100,68s. Primeiro novo standard interrompido
+apos falhas MCP: update documental do root excedeu8 itens/lista no inventario.
+RED do loader confirmou; inventario consolidado sem ampliar limite/schema,
+snapshot MCP21706/24576bytes e200 testes inventario/MCP aprovados/137,06s.
+Segundo standard integral concluido:11591 passed/124 skipped, zero falhas/errors,
+11715 coletados/2075,648s de pytest; encoding/docs/Ruff aprovados.17 hashes
+Python e inventario congelados permaneceram identicos. Primeiro gate interrompido
+nao foi contado como aprovado. Skips nao promovem plataforma/capability.
+NOVO piloto Qwen max9 executado uma unica vez apos standard:1 tentativa/1 resposta
+concluida/primeiro byte24140ms,414 input/30 output tokens. Transporte/EOF/parser
+aceitos, mas Core recusou invalid_model_message antes de ferramentas; zero
+reads/analise aceita. SQLite confirmou codigo em finished/synthesized; runner
+mostrou diagnostic_code_withheld por allowlist incompleta, nao causa da recusa.
+Mensagem interna incompativel comprovada, variante textual desconhecida sem raw.
+Final nativa2635chars conferida exatamente em SQLite/export/restart. Parada
+imediata na primeira falha, sem warm-up/retry/OAuth/API paga;8nao usadas, sem
+autoridade de reuso. Segundo turno/controle nao executados: memoria real pendente.
+REA MCP vivo6.7.0 detecta Ghidra12.1.4/Java21 disponivel, sem alvo aberto;
+IDAFree9.4/plugin presentes, provider not_configured. Nenhum binario analisado,
+config global alterada ou listener iniciado. Servidor tem build_commit null;
+nao equivale a bind criptografico ao pin do experimento REA anterior.
+Harness2 pode encaixar pelo comparador/Evolution existentes; adapter do framework
+externo nao implementado nem executado. Estudo atualizado com APIs e limites.
+Runbook: docs/operations/conversation-gate-reliability-2026-10-20.md.
+Inventario final21768/24576bytes, listas<=8/textos<=390, estados macro nao
+promovidos. Quick aprovado e200 testes frescos inventario/MCP/guardrails passaram
+em120,469s apos sincronizacao;17 hashes Python ainda sem drift. Revisao readonly
+independente sem weakening acionavel. Thread cleanup nao e hard-kill/SLA.
+Sem OAuth/API paga/commit/push/merge. MB236 e estados macro preservados.
+Registros abaixo sao historicos e nao substituem o standard/piloto desta continuidade.
+
+## REA, diagnostico de inferencia e OpenMausBot - 2026-10-20
+
+Pedido novo: continuar frentes independentes e absorver REA com multiagentes.
+Tres workers disjuntos (projecao REA, ponte/Core, fases locais); root integra,
+revisa, executa processos/testes e sincroniza estado. Importador opt-in
+apps.jarvis_rea implementado: Evidence JS estatico bounded -> projecao somente
+contagens/coverage -> source-review -> Core/governanca/final/memoria canonica.
+Nao executa REA e nao autentica origem/RFC8785: authority none, semantic false,
+rea_call_governed_by_core false. API/defaults Core/MCP permanecem intactos.
+Fases locais default-off instrumentam transporte/parser sem conteudo; EOF,
+deadline/cancel/config binding e fences de callback preservados. RED antes de
+implementar;257 testes REA/source-review e327 de inferencia/HTTP passaram.
+Standard novo terminou com exit1/11689 testes coletados/duas falhas: espera
+join(20) do worker nativo de analise e ausencia da excecao esperada no teste de
+binding MCP. Os dois arquivos, repetidos sem mudancas, passaram:66 testes/246,14s.
+Causa global nao comprovada; inspecao nao mostrou bypass do guard MCP nem
+participacao do novo transporte no caso nativo. Nao houve novo standard verde;
+WIP continua in_progress, sem aceite de fechamento.12 hashes Python preservados.
+
+Fork REA pin00a055be/6.7.0 obtido em artefatos privados, nao vendorizado. Node25
+global incompativel e addon Windows ausente. Docker Desktop iniciado sem reset;
+daemon29.8.1 respondeu. Dois builds isolados falharam antes da compilacao:
+Debian HTTP80 e HTTPS443 recusaram conexao; certificados nao foram relaxados.
+Alternativa offline funcionou: 549 dependencias publicas exatas em cache isolado,
+sem contas/install scripts, Node 24.19.0 e compile do fork em Docker sem rede.
+Duas analises REA reais de dois JS sinteticos geraram Evidence 56.187 bytes,
+9 nos/8 arestas/zero parse failures, sem executar o alvo e com cleanup.
+Importacao/Core/SQLite/restart da segunda: uma final de 1717 caracteres/3 eventos,
+defer_for_validation/quoted_for_review, sem forcar ALLOW. Oraculos privados
+iniciais supunham ALLOW/imports e falharam; readback concluiu sem terceira
+analise/modelo. Importacao nao e dispatch governado/utilidade homologada.
+Imagem/cache/source archive retidos fora do repo; nenhuma config global.
+
+OpenMausBot SHA1db45cab avaliado estaticamente: referencia util para tarefas,
+eventos/replay, refs/takeover e motores; nao importar cerebro/contas/defaults
+permissivos/enterprise. Estudo em docs/implementation/openmausbot-assessment-2026-10-20.md.
+Runbook: docs/operations/rea-static-evidence-and-local-phase-timing.md.
+Harness2 pin1cfe254e analisado: laboratorio para Evolution/OperatorLearningLoop,
+nao motor; contrastes/experiencias, sem sandboxoff/redeampla/selecao sembaseline.
+Estudo: docs/implementation/harness2-assessment-2026-10-20.md.
+Proximos aceites: utilidade e dispatch REA governado, depois outras familias;
+prova de memoria/modelo exige campanha nova, sem reutilizar saldos interrompidos.
+MB236 e qualidade de voz seguem abertos. Zero modelo/OAuth/API paga/commit/push/
+merge nesta rodada. PR#3 anterior OPEN/head71ecd0f/CIaprovado quando consultado.
+
+## Preparacao da publicacao solicitada - memoria e continuacao - 2026-10-18
+
+Operador autorizou subir as pendencias ao GitHub. Conjunto:31 arquivos;
+18 Python inicialmente conferidos contra snapshot posterior ao standard, sem
+divergencias. Staging revelou duas linhas extras no EOF de testes novos:
+normalizadas em test_mission_routing_core e test_tool_loop_continuation_guidance,
+AST identica confirmada e bateria fresca24passed/21,89s. Runtime nao alterado.
+Destino: codex/publish-canonical-history-continuation-2026-10-18 em vthamada/jarvis,
+com PR para main; merge nao solicitado. Base local/remota ae454a0 confirmada.
+Sem credenciais, audios, pesos, bancos, logs ou XML de teste no conjunto.
+Standard anterior a essa normalizacao:11421 passed/124 skipped/zero falhas/errors;
+quick de publicacao aprovado. A checagem
+de publicacao nao repete inferencias. Memoria real Qwen e MB236 seguem pendentes;
+nenhuma promocao de capability por publicar codigo. Estado efetivo de envio/CI
+deve ser conferido no remoto/PR; as notas seguintes precedem esta publicacao.
+
+## Continuidade/finalizacao do loop e memoria no segundo turno - 2026-10-18
+
+Novo pedido autorizado, mesmo WIP1. Runtime novo somente em shared/model_tool_loop:
+guidance host-derived de budget/observacoes/IDs e sugestao de finalizacao, sem
+novos grants/enforcement ou repair. Memoria opt-in anterior preservada; instrucao
+explicita permite preferencia conversacional, nunca autoridade. Tres agentes:
+testes de guidance, segundo turno e revisao readonly; root runtime/integracao/
+workloads/prova/docs. RED KeyError continuation;157unit/75Core/175CLI-HTTP passaram,
+selecoes sobrepostas; Ruff/diffcheck passaram. Standard desta continuidade exit0:
+11421 passed/124 skipped/zero falhas/errors,11545 casos,2212,79s.
+Operador autorizou NOVO piloto local max9 Qwen/sinteticos, sem retry/OAuth/pago;
+duas chamadas anteriores nao usadas continuam intactas. Piloto parou no primeiro
+turno:4tentativas/3concluidas/3reads, quarta timeout;1final nativa2635/39eventos.
+Primeira inferencia levou~94,46s, quarta tinha~9,42s no budget total120s; causa
+do custo nao isolada. Sem segundo turno/snapshot/controle/retry;5novas nao usadas.
+Modelo descarregado/pesos mantidos. Complemento offline por fase: READ so antes
+de observacao, FINAL primeiro apos evidencia, somenteFINAL sem saldo; nao
+sugerir ID de leitura ao sugerir finalizar. RED3schemas+1ID,160unit passaram
+antes do ultimo ajuste; bateria final171passed e standard aprovados, sem prova
+real da versao final. Uso de memoria real ainda nao demonstrado. Proximo passo:
+medir fases do transporte sem inferencias e planejar nova prova contabilizada;
+nao reusar saldo interrompido. XML gerado com nome relativo incorreto foi
+validado/movido para artefatos, sem mudar resultado. Runbook:
+docs/operations/tool-loop-continuation-and-memory-2026-10-18.md.
+Sem commit/push; registros seguintes sao historicos.
+
+## Conversa com memoria/ferramentas e prova gpt-6.1-sol - 2026-10-18
+
+Continuidade do WIP1 autorizado: workers memoria/avaliacao/review; root
+CLI/integracao/prova/testes/docs. Historico canonico opt-in nas duas CLIs:
+mesmo sujeito/sessao,6fontes/3pares/4000chars, sem anexos e screening sensivel
+antes projecao, events/binding/fences. Fontes das missoes usam seam reviewed,
+nao content de intent;512bundle/2048brief, envelopegrader ainda aberto.
+128focados e389regressao passaram, inclusive CLI/subprocess/HTTP/SQLite/restart;
+8falhas HTTP no ambiente restrito nao se repetiram com permissao de sockets,
+sem mudar codigo/testes. Standard Windows concluido exit0:11390 passed,
+124 skipped/zero falhas/errors;14 hashes Python preservados durante o gate.
+Autorizacao: mesma conta gpt-6.1-sol/ate6 chamadas sinteticas/refresh so expirado.
+Um refresh concluiu mesmo vinculo; uma inferencia falhou HTTP200/Content-Type
+ausente/TEchunked. Zero concluidas/tools/segundo turno/retry/fallback; final
+nativa2635/25eventos/readback confirmado. MB236 blocked; nao e conversa util
+homologada/Webtools.
+Download e piloto local separados foram autorizados: qwen3:4b-instruct instalado
+no Ollama,2497293803 bytes. Apos o gate,4 inferencias concluidas/3 leituras
+governadas (documentacao/observabilidade/documentacao); quarta proposta recusada
+reused_call_id. Sem analise aceita/segundo turno/retry;2 chamadas nao usadas.
+Readback local:1final nativa2635/40eventos, export exato. Modelo descarregado,
+pesos mantidos; nao mudou preferencia gpt-6.1-sol ou habilitou Web. Proximo slice:
+investigar instrucoes de continuacao/budget/finalizacao, sem relaxar guardas;
+hipotese, nao causa comprovada. Sem commit/push nesta continuidade.
+Runbook: docs/operations/canonical-history-conversation-pilot-2026-10-18.md.
+PR#2 anterior integrado squash ae454a0 apos CI Linux11224/195skips aprovado;
+main sincronizada antes deste novo trabalho. Notas abaixo historicas.
+
 ## PR#2: revisao SQLite e telemetria - 2026-10-18
 
 CI do head021e10e aprovado:11213 passed/195 skipped/zero falhas, run39163449556.

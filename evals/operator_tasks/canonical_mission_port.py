@@ -20,7 +20,13 @@ from apps.jarvis_console.bootstrap import ROOT, ensure_src_paths
 from apps.jarvis_console.conversation_export import export_conversation
 from apps.jarvis_console.voice_pilot import _isolated_core
 from shared.contracts import InputContract
-from shared.reviewed_knowledge import GENERATIVE_ANALYSIS_MARKER
+from shared.reviewed_knowledge import (
+    GENERATIVE_ANALYSIS_MARKER,
+    MAX_QUERY_CHARACTERS,
+    MAX_QUOTE_CHARACTERS,
+    KnowledgeReviewBinding,
+    ReviewedTextSource,
+)
 from shared.types import ChannelType, InputType, PermissionDecision, RequestId, SessionId
 
 from .corpus import Source
@@ -28,13 +34,15 @@ from .runner import Binding, ExecutionRequest, ExecutionResult, _identifier
 
 ensure_src_paths()
 
+from knowledge_service.source_review import LocalKnowledgeReview  # noqa: E402
 from orchestrator_service.service import OrchestratorService  # noqa: E402
 from synthesis_engine.engine import SynthesisEngine  # noqa: E402
+from synthesis_engine.generative_analysis import _SENSITIVE_INPUT  # noqa: E402
 
 _MODES = {"fixture": "fixture", "injected_transport": "injected_transport", "live": "model_real"}
 
 
-def _prompt(request):
+def _request_data(request):
     if (type(request) is not ExecutionRequest or type(request.binding) is not Binding
             or request.history is not None or type(request.sources) is not tuple
             or not 1 <= len(request.sources) <= 16
@@ -43,12 +51,53 @@ def _prompt(request):
     for key in ("run_id", "request_id", "case_id", "revision", "subject_ref", "session_ref"):
         if not _identifier(getattr(request.binding, key)):
             raise ValueError("invalid_canonical_mission_request")
-    value = (request.brief + "\nRequest binding: "
-             + json.dumps(asdict(request.binding), sort_keys=True))
-    value += "\nSupplied sources: " + json.dumps([asdict(item) for item in request.sources])
-    if not value.strip() or len(value) > 16000:
+    if (type(request.brief) is not str or not request.brief.strip()
+            or len(request.brief) > MAX_QUERY_CHARACTERS):
         raise ValueError("invalid_canonical_mission_request")
-    return value
+    for source in request.sources:
+        if (type(source.ref) is not str or not source.ref.strip()
+                or type(source.text) is not str or not source.text.strip()):
+            raise ValueError("invalid_canonical_mission_request")
+        if len(source.ref) > MAX_QUOTE_CHARACTERS or len(source.text) > MAX_QUOTE_CHARACTERS:
+            raise ValueError("canonical_mission_source_limit")
+        # Check the original fields too: JSON escaping must not hide a known
+        # sensitive pattern from the unchanged native generative egress guard.
+        if _SENSITIVE_INPUT.search(source.ref) or _SENSITIVE_INPUT.search(source.text):
+            raise ValueError("canonical_mission_source_sensitive")
+    bundle = json.dumps({"sources": [asdict(item) for item in request.sources]},
+                        ensure_ascii=False, separators=(",", ":"))
+    if len(bundle) > MAX_QUOTE_CHARACTERS:
+        # No truncation, source subset or fabricated explanation/product.
+        raise ValueError("canonical_mission_source_limit")
+    try:
+        bundle.encode("utf-8", errors="strict")
+        request.brief.encode("utf-8", errors="strict")
+    except UnicodeError:
+        raise ValueError("invalid_canonical_mission_request") from None
+    return request.brief, bundle
+
+
+def _source_review(contract, bundle, *, clock, timeout_seconds):
+    """Host-selected synthetic fixture data, not authenticated origin or authority."""
+    stamp = datetime.now(UTC).isoformat()
+    raw = bundle.encode("utf-8")
+    source = ReviewedTextSource(
+        text=bundle, source_url="https://mission-evaluation.example/supplied-sources",
+        observed_at=stamp, content_sha256=hashlib.sha256(raw).hexdigest(),
+        byte_count=len(raw), media_type="text/plain",
+    )
+    binding = KnowledgeReviewBinding(
+        contract.canonical_user_ref, str(contract.session_id), str(contract.request_id),
+    )
+    review = LocalKnowledgeReview(binding, clock=clock)
+    review.consent(binding, granted=True)
+    ticket = review.propose(source, contract.content, binding=binding,
+                            deadline_seconds=timeout_seconds)
+    review.review(ticket, binding=binding)
+    selected = review.select(ticket, binding=binding, start=0, end=len(bundle))
+    context = review.confirm(ticket, binding=binding, fingerprint=selected.fingerprint,
+                             revision=selected.revision)
+    return context, review
 
 
 class CanonicalMissionTaskPort:
@@ -81,13 +130,15 @@ class CanonicalMissionTaskPort:
                 "native_decisions_required": self._decision_required,
                 "last_outcome": self._last, "production_memory_opened": False,
                 "answer_repair": False, "operation_authority": False,
+                "source_routing": "request_bound_reviewed_bundle",
+                "source_bundle_character_limit": MAX_QUOTE_CHARACTERS,
                 "projection": "canonical_unverified_analysis" if self._inference
                 else "canonical_full_text"}
 
     def execute(self, request):
         if self._authorized is not True:
             raise ValueError("canonical_mission_opt_in_required")
-        text = _prompt(request)
+        text, bundle = _request_data(request)
         binding = request.binding
         now = self._clock()
         if (type(request.deadline) not in {int, float} or not math.isfinite(request.deadline)
@@ -132,8 +183,8 @@ class CanonicalMissionTaskPort:
         )
         directive = core.executive_engine.direct(contract)
         self._clarifications += int(directive.requires_clarification is True)
-        if (directive.should_execute_operation
-                or directive.intent not in {"analysis", "conversation", "general_assistance"}):
+        if (directive.should_execute_operation or directive.requires_clarification
+                or directive.intent != "analysis"):
             self._last = "core_scope_refused"
             return ExecutionResult(binding, "needs_decision")
         before_dispatch = self._clock()
@@ -144,7 +195,18 @@ class CanonicalMissionTaskPort:
             self._last = "stopped_before_core_dispatch"
             return ExecutionResult(binding, "incomplete")
         try:
-            response = core.handle_input(contract)
+            context, review = _source_review(
+                contract, bundle, clock=self._clock,
+                timeout_seconds=min(120, request.deadline - before_dispatch),
+            )
+            reviewed = self._clock()
+            if (type(reviewed) not in {int, float} or not math.isfinite(reviewed)
+                    or not before_dispatch <= reviewed < request.deadline
+                    or (self._cancellation and self._cancellation.is_set())):
+                self._last = "stopped_before_core_dispatch"
+                return ExecutionResult(binding, "incomplete")
+            response = core.handle_input(contract, reviewed_knowledge=context,
+                                         knowledge_review=review)
             self._turns += 1
             if (response.request_id != binding.request_id
                     or response.session_id != binding.session_ref

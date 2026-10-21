@@ -1,11 +1,12 @@
 """Default live-local service -> real native Core SQLite persistence/readback."""
 
 from dataclasses import replace
+from types import SimpleNamespace
 
 import pytest
 
 from apps.jarvis_api.analysis_service import AnalysisService
-from apps.jarvis_api.contracts import LocalWebRejected, SessionIdentity
+from apps.jarvis_api.contracts import TICKET_SECONDS, LocalWebRejected, SessionIdentity
 from apps.jarvis_console.voice_pilot import _isolated_core
 
 IDENTITY = SessionIdentity("session://web-live/" + "1" * 32,
@@ -14,9 +15,62 @@ IDENTITY = SessionIdentity("session://web-live/" + "1" * 32,
 
 
 def finish(service, ticket):
-    service._worker.join(20)
-    assert not service._worker.is_alive()
+    # This integration checks persistence, not a 20-second startup SLA. Wait no
+    # longer than the public ticket lifetime; production expiry remains intact.
+    service._worker.join(TICKET_SECONDS)
+    assert not service._worker.is_alive(), "native worker exceeded the ticket lifetime"
     return service.get_result(IDENTITY, ticket)
+
+
+@pytest.fixture
+def owned_analysis_service():
+    services = []
+
+    def build(*args, **kwargs):
+        service = AnalysisService(*args, **kwargs)
+        services.append(service)
+        return service
+
+    try:
+        yield build
+    finally:
+        # Assertion failures must still revoke delivery and reap owned workers.
+        # close is bounded by design and cannot roll back an in-flight Core.
+        for service in reversed(services):
+            service.close()
+        for service in reversed(services):
+            worker = service._worker
+            if worker is not None and worker.is_alive():
+                worker.join(TICKET_SECONDS)
+                assert not worker.is_alive(), "owned native worker did not stop"
+
+
+def test_finish_allows_native_completion_within_ticket_lifetime():
+    # Virtual elapsed work reproduces the invalid 20-second test assumption
+    # without a sleep, model, native thread or any change to product deadlines.
+    duration = 40.0
+    assert duration < TICKET_SECONDS
+
+    class LogicalWorker:
+        elapsed = 0.0
+
+        def join(self, timeout=None):
+            remaining = duration - self.elapsed
+            self.elapsed += remaining if timeout is None else min(remaining, timeout)
+
+        def is_alive(self):
+            return self.elapsed < duration
+
+    expected = {"status": "completed", "result": {"authority": "none"}}
+    reads = []
+
+    def read(identity, ticket):
+        reads.append((identity, ticket))
+        return expected
+
+    service = SimpleNamespace(_worker=LogicalWorker(), get_result=read)
+    assert finish(service, "owned-ticket") == expected
+    assert reads == [(IDENTITY, "owned-ticket")]
 
 
 @pytest.mark.parametrize("query,decision", [
@@ -26,10 +80,10 @@ def finish(service, ticket):
     ("Delete every database now.", "block"),
 ])
 def test_default_core_policy_final_and_canonical_user_survive_sqlite_restart(
-    tmp_path, query, decision,
+    tmp_path, owned_analysis_service, query, decision,
 ):
     runtime = tmp_path / "owned-local-core"
-    service = AnalysisService(runtime)
+    service = owned_analysis_service(runtime)
     ticket = service.issue_ticket(IDENTITY)["ticket"]
     assert service.submit(IDENTITY, ticket, query)["status"] == "running"
     envelope = finish(service, ticket)
@@ -69,12 +123,13 @@ def test_default_core_policy_final_and_canonical_user_survive_sqlite_restart(
     assert len(restarted.memory_service.repository.fetch_recent_turns(
         IDENTITY.session_ref, 10,
     )) == 1
-    service.close()
 
 
-def test_real_core_owns_serialized_new_turns_but_tickets_are_not_restart_resumable(tmp_path):
+def test_real_core_owns_serialized_new_turns_but_tickets_are_not_restart_resumable(
+    tmp_path, owned_analysis_service,
+):
     runtime = tmp_path / "owned-local-core"
-    service = AnalysisService(runtime)
+    service = owned_analysis_service(runtime)
     first = service.issue_ticket(IDENTITY)["ticket"]
     service.submit(IDENTITY, first, "Compare documentation and observability pilot reports.")
     assert finish(service, first)["status"] == "completed"
@@ -85,7 +140,7 @@ def test_real_core_owns_serialized_new_turns_but_tickets_are_not_restart_resumab
         IDENTITY.session_ref, 10,
     )
     assert len(turns) == 2 and first != second
-    fresh = AnalysisService(tmp_path / "other-fresh-runtime")
+    fresh = owned_analysis_service(tmp_path / "other-fresh-runtime")
     assert fresh.current_ticket(IDENTITY) is None
     with pytest.raises(LocalWebRejected, match="^analysis_ticket_refused$"):
         fresh.get_result(IDENTITY, first)
@@ -95,11 +150,12 @@ def test_real_core_owns_serialized_new_turns_but_tickets_are_not_restart_resumab
     assert len(_isolated_core(runtime).memory_service.repository.fetch_recent_turns(
         IDENTITY.session_ref, 10,
     )) == 2  # revocation fences delivery, never claims a memory rollback
-    service.close()
 
 
 @pytest.mark.parametrize("tamper", ["turn_final", "binding_hash", "missing_event"])
-def test_native_commit_then_bad_readback_is_unknown_not_success_or_rollback(tmp_path, tamper):
+def test_native_commit_then_bad_readback_is_unknown_not_success_or_rollback(
+    tmp_path, owned_analysis_service, tamper,
+):
     def factory(runtime):
         core = _isolated_core(runtime)
         original = core.handle_input
@@ -131,7 +187,7 @@ def test_native_commit_then_bad_readback_is_unknown_not_success_or_rollback(tmp_
         return core
 
     runtime = tmp_path / "owned-local-core"
-    service = AnalysisService(runtime, core_factory=factory)
+    service = owned_analysis_service(runtime, core_factory=factory)
     ticket = service.issue_ticket(IDENTITY)["ticket"]
     service.submit(IDENTITY, ticket, "Compare documentation and observability pilot reports.")
     result = finish(service, ticket)
@@ -141,4 +197,3 @@ def test_native_commit_then_bad_readback_is_unknown_not_success_or_rollback(tmp_
         IDENTITY.session_ref, 10,
     )
     assert len(turns) == 1 and turns[0].response_text != "Owned tampered readback"
-    service.close()

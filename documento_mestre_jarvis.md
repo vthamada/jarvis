@@ -70,6 +70,30 @@ De forma mais específica, o sistema deve:
 
 Essa missao inclui, ao longo do tempo, tornar-se um parceiro pessoal capaz de ajudar o usuario a conduzir objetivos, projetos, decisoes e tarefas de forma ampla, sem fragmentar a entidade em assistentes desconexos por dominio ou superficie.
 
+### 3.1 Composição tecnológica orientada a resultados — direção 2026-10-20
+
+O JARVIS deve aproveitar implementações, capacidades e aprendizados de projetos
+existentes para construir uma experiência integrada superior nas tarefas do
+usuário. Reaproveitar código é uma opção real, não apenas estudar referências
+para depois reimplementar tudo. Essa direção foi explicitada pelo operador e
+não reduz o JARVIS a um clone ou a um único framework externo.
+
+O caminho recomendado é composição seletiva: uma base principal por
+responsabilidade, componentes substituíveis e desenvolvimento próprio onde
+houver necessidade ou diferenciação comprovável. A identidade, a governança,
+a memória canônica e a síntese final continuam sob autoridade do núcleo;
+a implementação atual não fica imune a substituição por custo já investido.
+
+Superar os sistemas de referência é uma ambição, não um estado demonstrado.
+O critério de progresso é concluir tarefas úteis com qualidade, continuidade,
+segurança e custo aceitável, comparando condições equivalentes. Acumular
+frameworks, superfícies ou documentos não demonstra esse progresso.
+
+A decisão crítica, suas alternativas e o protocolo de evidência ficam no
+[Technology Absorption Order](docs/architecture/technology-absorption-order.md).
+A execução permanece na [fila única](docs/implementation/execution-backlog.md),
+sem substituir a Constituição de Engenharia nem criar outro backlog.
+
 ---
 
 ## 4. Natureza do sistema

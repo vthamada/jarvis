@@ -1,5 +1,77 @@
 # Implementation Master Map
 
+Execução atual 2026-10-20: replay textual Hermes pin0b8dee00 reutilizado opt-in,
+baseline/candidata no mesmo Core e comparador com memória/restart/controle.
+Gate portátil com temporários isolados/JUnit, sem checks relaxados; validação
+global aprovada11904passed/124skips/0falhas. Piloto real6tentativas: ambos
+fecharam loop/2fontes, mas falharam preferência/layout seed; memória/controle
+não executados. Sem vantagem demonstrada ou promoção macro/MB236. Próximo foco:
+intenção/formato, resposta Core legível e depois memória. Evidência e limites:
+[experimento Hermes](../operations/hermes-context-comparison-2026-10-20.md).
+
+Direção de seleção atualizada em 2026-10-20: composição seletiva orientada a
+tarefas, incluindo reuso real de código, sem promoção implícita. Norte e
+alternativas no [Technology Absorption Order](../architecture/technology-absorption-order.md);
+próximo experimento na [fila única](execution-backlog.md). O Documento-Mestre
+continua canônico; os estados de produto e MB236 não mudaram por esta decisão.
+
+Atual2026-10-20: schemas locais opt-in por progresso implementados, default-off,
+sem alterar Core/parser/limites.376 focados e standard Windows11712 passed/
+124 skipped/zero falhas/errors;20 hashes Python e inventario sem drift no gate.
+Cinco ensaios Qwen somam14tentativas/12respostas: ultimo fechou1comparacao de
+duas fontes, mas segundo turno com historico e fontes novas estourou120s na
+finalizacao. Controle real nao executado; memoria util ainda nao comprovada.
+Latencia permanece lacuna, sem causalidade demonstrada. Sem retry/warmup/OAuth/
+API paga ou promocao macro/MB236. Nenhuma inferencia em curso. Runbook:
+docs/operations/structured-local-conversation-2026-10-20.md.
+Estudo aditivo ai-memory pin5519b89c: util para FTS/RRF/context packing/handoffs,
+nao substituto do canonico. Sem instalar/executar/integrar. Plano experimental:
+docs/implementation/ai-memory-assessment-2026-10-20.md.
+Registros abaixo sao historicos.
+
+2026-10-20 F01/F13: importacao opt-in de Evidence REA JavaScript estatico via
+projecao bounded e source-review/Core/memoria; nao executor nem digest/origem
+verificados. F01 ganha phase_observer default-off no transporte/provider local;
+257 testes REA/source-review e327 inferencia/HTTP passaram. Standard terminou
+exit1/11689 coletados/duas falhas;66 testes dos dois arquivos passaram na repeticao
+sem mudancas. Causa inconclusiva; WIP in_progress, sem novo standard verde.
+Fork00a055be/6.7.0 compiladooffline apos dependencia Debian recusada;2analises
+REA reais/Core/SQLite/restart com DEFER nativo, nao dispatch governado.
+OpenMausBot1db45cab
+analisado, referencia para F05/F06/F09/F10 sem copiar codigo/cerebro/enterprise.
+Sem nova inferencia, promocao macro ou desbloqueio MB236. Runbook:
+docs/operations/rea-static-evidence-and-local-phase-timing.md.
+Notas anteriores abaixo sao historicas.
+
+Pedido adicional Harness2 pin1cfe254e estudado: laboratorio para F04/T02 e
+OperatorLearningLoop existente, sem instalar/executar/promover. Comparar contra
+baseline elegivel; nao copiar sandboxoff/redeampla/politicaseditaveis. Estudo:
+docs/implementation/harness2-assessment-2026-10-20.md.
+
+2026-10-18 continuidade F01/F02/F03: guidance explicito de continuacao/finalizacao
+e IDs sem colisao, mantendo limites/recusas/policy.157unit/75Core/175CLI-HTTP
+passaram; final171focados e standard novo11421 passed/124 skipped/zero falhas.
+Novo piloto Qwen max9 parou na4a tentativa
+por timeout,3 concluidas/3reads, sem segundo turno/controle. Complemento offline
+por fase/ID sem sugestao contraditoria implementado depois, sem nova inferencia.
+Memoria real nao demonstrada;5novas e2antigas chamadas nao usadas.
+WIP1 mantido, sem Web/voz/efeitos novos. Runbook:
+docs/operations/tool-loop-continuation-and-memory-2026-10-18.md.
+
+2026-10-18 F01/F02/F03: historico canonico opt-in nas CLIs de tool-loop,
+mesmo sujeito/sessao/limites/fences e sem anexos. F04 separa fontes do intent
+pela seam reviewed limitada, sem resolver envelopegrader ou promover missoes.
+128focados/389regressao passaram; standard Windows11390 passed/124 skipped,
+zero falhas/errors,14 hashes Python preservados. Prova gpt-6.1-sol
+autorizada apos um refresh expirado da mesma conta parou na primeira inferencia
+HTTP200/CTausente/TEchunked, sem tools/retry. MB236 blocked; nada de modelo real
+homologado/Webtools/vozfluida. Qwen3:4b-instruct instalado com autorizacao;
+piloto apos gate concluiu4 inferencias/3 leituras, mas recusou reused_call_id
+sem analise aceita ou segundo turno. Sem retry;2 chamadas nao usadas e modelo
+descarregado. Investigar continuacao/budget/finalizacao mantendo guardas;
+nao e causa comprovada ou aceite de conversa util/memoria real.
+Runbook: docs/operations/canonical-history-conversation-pilot-2026-10-18.md.
+
 2026-10-17, F01/F04: campanha opt-in de25 missoes publicas sinteticas e grader
 independente implementados, V1 preservado. Baseline sem produto aceito aponta
 gap de adapter/roteamento; piloto gpt-6.1-sol parou por sessao expirada sem

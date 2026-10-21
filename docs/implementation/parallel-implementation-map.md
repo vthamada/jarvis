@@ -1,5 +1,45 @@
 # Mapa executavel de implementacao paralela do JARVIS
 
+Rodada atual2026-10-20: três agentes disjuntos para replay/proveniência Hermes,
+runner/grader/testes e portabilidade do gate; root integra provider/CLI/executor,
+verifica e serializa modelos. WIP1 replanejado para experimento de contexto,
+sem depender de MB236; sem tarefas concorrentes sobre conta/modelo/store.
+Default-off, não Hermes completo ou memória paralela. Gate global aprovado;
+piloto real encerrado com6tentativas: ambos fecharam loop/2fontes, mas falharam
+preferência/layout seed. Memória/controle não executados, sem promoção ou
+vantagem demonstrada. Frentes independentes encerradas; WIP de conversa segue.
+Próximo foco é intenção/formato e síntese útil antes de nova prova de memória.
+Runbook:
+[Hermes e conversa comparativa](../operations/hermes-context-comparison-2026-10-20.md).
+
+Atual2026-10-20: schemas locais opt-in por progresso implementados, default-off,
+sem alterar Core/parser/limites.376 focados e standard Windows11712 passed/
+124 skipped/zero falhas/errors;20 hashes Python e inventario sem drift no gate.
+Cinco ensaios Qwen somam14tentativas/12respostas: ultimo fechou1comparacao de
+duas fontes, mas segundo turno com historico e fontes novas estourou120s na
+finalizacao. Controle real nao executado; memoria util ainda nao comprovada.
+Latencia permanece lacuna, sem causalidade demonstrada. Sem retry/warmup/OAuth/
+API paga ou promocao macro/MB236. Nenhuma inferencia em curso. Runbook:
+docs/operations/structured-local-conversation-2026-10-20.md.
+Estudo aditivo ai-memory pin5519b89c: util para FTS/RRF/context packing/handoffs,
+nao substituto do canonico. Sem instalar/executar/integrar. Plano experimental:
+docs/implementation/ai-memory-assessment-2026-10-20.md.
+Registros abaixo sao historicos.
+
+Continuidade 2026-10-20: tres workers com ownership disjunto (Evidence REA,
+ponte Core/CLI e timing local) e root unico executor/integrador. Importador REA
+estatico e metadados opt-in por fase implementados;257 testes de fonte/Core e
+327 inferencia/HTTP passaram. Standard exit1/11689 coletados/duas falhas;
+repeticao dos dois arquivos sem mudancas:66 passed, causa inconclusiva. WIP
+in_progress, sem novo standard verde. Nao conectar executor
+REA/MCP generico nem absorver OpenMausBot inteiro: estudo fixado traduz
+candidatos F05/F06/F09/F10. REA compiladooffline apos dependenciaDebian recusada;
+2execucoesestaticas/Core/SQLite/restart reais com DEFER nativo, nao dispatch
+governado. Harness2 pin1cfe254e estudado
+como laboratorio F04/T02, sem executar/promover. Nenhuma chamada de conta ou
+piloto local; MB236/qualidade de modelo iguais. Runbook:
+docs/operations/rea-static-evidence-and-local-phase-timing.md.
+
 Continuidade F01/F04 2026-10-17: tres workers disjuntos (corpus/grader,
 campanha/CLI, referencia de modelo/revisao) e integracao/verificacao central.
 25 missoes sinteticas publicas, nao holdout secreto nem execucao de Hermes;

@@ -2,6 +2,27 @@
 
 ## 2026-10-18
 
+- Loop readonly passa a informar progresso/budget/IDs nao colidentes e sugerir
+  finalizacao, sem ampliar ferramentas/autoridade ou reparar propostas recusadas.
+  Testes novos de guidance/segundo turno/restart e fixture guiada;157unit/75Core/
+  175CLI-HTTP passaram, selecoes sobrepostas. Final171focados e standard novo
+  exit0:11421 passed/124 skipped/zero falhas/errors. Piloto
+  Qwen local com NOVO teto9 parou na4a tentativa por timeout:3 concluidas/3reads,
+  sem segundo turno/controle e5 nao usadas. Complemento por fase e ID de leitura
+  omitido ao sugerir finalizar validados offline; sem novo modelo ou retry.
+  Runbook: docs/operations/tool-loop-continuation-and-memory-2026-10-18.md.
+
+- Historico canonico opt-in no loop CLI, com isolamento/limites/sem anexos/fences.
+  Avaliador separa fontes do intent via seam reviewed; envelopegrader pendente.
+  128focados/389regressao passaram; standard Windows11390 passed/124 skipped,
+  zero falhas/errors e14 hashes Python preservados. Prova autorizada:
+  refresh expirado da mesma conta concluiu; unica inferencia recusada HTTP200
+  sem Content-Type/TEchunked. Sem retry ou modelo homologado; MB236 blocked.
+  Qwen3:4b-instruct baixado com autorizacao; piloto local apos gate executou
+  4 inferencias/3 leituras, mas recusou reused_call_id sem analise aceita.
+  Sem retry/segundo turno,2 chamadas restantes nao usadas; pesos retidos,
+  modelo descarregado. Conversa util/memoria com modelo real ainda nao aceitas.
+
 - Revisao PR#2: _open suporta SQLite sem enable_load_extension mantendo todas
   as restricoes SQL. Telemetria emite correcao terminal compensatoria quando
   callback revoga publicacao, sem repetir modelo ou expor texto.10 regressoes

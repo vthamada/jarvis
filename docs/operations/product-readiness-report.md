@@ -1,5 +1,55 @@
 # Inventário atual de prontidão do produto
 
+Recorte atual2026-10-20: --hermes-context default-off e executor comparativo
+implementados, sem mudar estados macro. Replay de contexto reutilizado não é
+loop Hermes completo, segundo store ou promoção de qualidade. Gate global
+aprovado11904passed/124skips/0falhas. Piloto real6tentativas fechou os dois
+loops/2fontes, mas ambos falharam preferência/layout seed; memória/controle não
+executados, sem vantagem demonstrada. Resultados e próximos recortes no
+[runbook Hermes](hermes-context-comparison-2026-10-20.md).
+
+Atual2026-10-20: schemas locais opt-in por progresso implementados, default-off,
+sem alterar Core/parser/limites.376 focados e standard Windows11712 passed/
+124 skipped/zero falhas/errors;20 hashes Python e inventario sem drift no gate.
+Cinco ensaios Qwen somam14tentativas/12respostas: ultimo fechou1comparacao de
+duas fontes, mas segundo turno com historico e fontes novas estourou120s na
+finalizacao. Controle real nao executado; memoria util ainda nao comprovada.
+Latencia permanece lacuna, sem causalidade demonstrada. Sem retry/warmup/OAuth/
+API paga ou promocao macro/MB236. Nenhuma inferencia em curso. Runbook:
+docs/operations/structured-local-conversation-2026-10-20.md.
+Estudo aditivo ai-memory pin5519b89c: util para FTS/RRF/context packing/handoffs,
+nao substituto do canonico. Sem instalar/executar/integrar. Plano experimental:
+docs/implementation/ai-memory-assessment-2026-10-20.md.
+Registros abaixo sao historicos.
+
+Atualizacao2026-10-20: importador REA estatico e diagnostico local de fases
+default-off implementados;257 testes de fonte/Core e327 inferencia/HTTP passaram.
+ForkREA00a055be compiladooffline e executado sem rede em dois JS sinteticos;
+Core/SQLite/restart registraram final1717/3eventos com DEFER nativo, nao despacho
+governado. Standard exit1/11689 coletados/duas falhas; repeticao dos dois arquivos
+sem mudancas:66 passed, causa inconclusiva. WIP in_progress, sem standard verde.
+OpenMausBot1db45cab eHarness2 1cfe254e analisados como referencias distintas,
+sem instalar/executar/promover. MB236 e estados macro iguais. Runbook:
+[REA e fases locais](rea-static-evidence-and-local-phase-timing.md).
+
+Continuidade 2026-10-18: loop com progresso/instrucoes por fase; segundo turno
+contextual provado em fixture sobre Core/SQLite/restart reais. Piloto Qwen novo
+parou na4a tentativa por timeout,3 concluidas/3reads, sem segundo turno/controle.
+Cinco chamadas novas nao usadas, sem retry; memoria real ainda nao aceita.
+Complemento final por fase posterior ao piloto validado offline;171 focados
+passaram, novo standard11421 passed/124 skipped/zero falhas/errors, exit0.
+Estados macro/MB236 preservados. Runbook:
+[continuacao e memoria](tool-loop-continuation-and-memory-2026-10-18.md).
+
+Snapshot 2026-10-18: historico canonico opt-in CLI e separacao de fontes do
+avaliador implementados/testados. Standard Windows11390 passed/124 skipped,
+zero falhas/errors. OAuth gpt-6.1-sol:1 tentativa recusada sem Content-Type,
+apos renovacao autorizada de sessao expirada. Qwen3:4b-instruct instalado e
+piloto local4 inferencias/3 leituras; reused_call_id impediu analise aceita.
+Sem retry/segundo turno ou memoria real homologada; estados macro/MB236 iguais.
+Runbook: [conversa e pilotos](canonical-history-conversation-pilot-2026-10-18.md).
+Registros anteriores abaixo sao historicos.
+
 Snapshot F01/F04 2026-10-17:25 missoes publicas sinteticas, grader e comparador
 opt-in disponiveis. Baseline aponta lacuna de adapter/roteamento, nao sucesso;
 piloto OAuth gpt-6.1-sol interrompido por sessao expirada, sem refresh/retry.

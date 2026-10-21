@@ -117,7 +117,7 @@ class _LazyAccountPort:
 def analyze_reports(document, *, reports, authorized=False, confirmed=False,
                     reports_confirmed=False, session_id, model, credential_dir, profile_ref,
                     timeout_seconds=30, include_content=False, core_factory=None,
-                    port_factory=None):
+                    port_factory=None, include_canonical_history=False):
     """Host-selected paths are never model arguments; consent is not authentication.
 
     The explicit port factory is a trusted test seam, not a credential search or
@@ -128,7 +128,8 @@ def analyze_reports(document, *, reports, authorized=False, confirmed=False,
             authorized, confirmed, session_id, model, credential_dir, profile_ref,
             timeout_seconds, include_content, core_factory, port_factory,
         )
-        if (reports_confirmed is not True or type(reports) is not dict
+        if (type(include_canonical_history) is not bool
+                or reports_confirmed is not True or type(reports) is not dict
                 or not 1 <= len(reports) <= 3 or type(document) is not dict
                 or set(document) != {"schema_version", "query"}
                 or document["schema_version"] != INPUT_SCHEMA
@@ -156,6 +157,7 @@ def analyze_reports(document, *, reports, authorized=False, confirmed=False,
             query, reader=reader, port=port, session_id=session_id, model=model,
             timeout_seconds=timeout_seconds, include_content=include_content,
             core_factory=core_factory, redactor=redactor, output_schema=OUTPUT_SCHEMA,
+            include_canonical_history=include_canonical_history,
         )
     except Exception:
         raise ValueError("invalid_model_tool_loop_input") from None
@@ -163,7 +165,8 @@ def analyze_reports(document, *, reports, authorized=False, confirmed=False,
 
 def _run_report_loop(query, *, reader, port, session_id, model, timeout_seconds,
                      include_content, core_factory, redactor, output_schema,
-                     cancellation=None, expected_provider_id=None, expected_evidence_mode=None):
+                     cancellation=None, expected_provider_id=None, expected_evidence_mode=None,
+                     include_canonical_history=False):
     """Shared canonical flow; only validated host compositions may select a port.
 
     Callers own provider selection, schema and input consent; neither documents
@@ -185,6 +188,7 @@ def _run_report_loop(query, *, reader, port, session_id, model, timeout_seconds,
                                 else expected_evidence_mode),
         timeout_seconds=timeout_seconds,
         cancellation=cancellation,
+        include_canonical_history=include_canonical_history,
     )
     core = (core_factory or _default_core_factory)()
     previous = core.model_tool_loop
@@ -280,6 +284,10 @@ def main(argv=None):
     parser.add_argument("--report", action="append", required=True, metavar="ID=ABSOLUTE_PATH")
     parser.add_argument("--timeout-seconds", type=float, default=30)
     parser.add_argument("--include-content", action="store_true")
+    parser.add_argument(
+        "--include-canonical-history", action="store_true",
+        help="Send bounded same-subject/session canonical history to the selected model.",
+    )
     try:
         args = parser.parse_args(argv)
         reports = {}
@@ -294,6 +302,7 @@ def main(argv=None):
             session_id=args.session_id, model=args.model, credential_dir=args.credential_dir,
             profile_ref=args.profile_ref, timeout_seconds=args.timeout_seconds,
             include_content=args.include_content,
+            include_canonical_history=args.include_canonical_history,
         )
         print(json.dumps(result, ensure_ascii=True, allow_nan=False, sort_keys=True))
         return 0

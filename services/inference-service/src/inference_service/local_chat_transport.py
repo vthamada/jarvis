@@ -21,6 +21,9 @@ from threading import Event
 from time import monotonic
 from urllib.parse import urlsplit
 
+from inference_service.phase_timing import emit_phase
+from inference_service.tool_loop_format import tool_loop_format_state
+
 LOCAL_CHAT_ERROR_CODES = frozenset({
     "invalid_timeout", "invalid_cancellation", "invalid_clock", "invalid_request_payload",
     "request_limit_exceeded", "response_limit_exceeded", "cancelled", "timeout",
@@ -80,12 +83,18 @@ def _endpoint(value: str) -> tuple[str, int, int, str]:
 
 
 def _request_bytes(payload: object, limit: int) -> bytes:
-    if (type(payload) is not dict or set(payload) != {"model", "messages", "n", "stream"}
+    fields = {"model", "messages", "n", "stream"}
+    if (type(payload) is not dict or set(payload) not in (fields, fields | {"response_format"})
             or type(payload["model"]) is not str or not 1 <= len(payload["model"]) <= 160
             or any(not 33 <= ord(c) <= 126 for c in payload["model"])
             or "://" in payload["model"] or type(payload["n"]) is not int or payload["n"] != 1
             or payload["stream"] is not False):
         raise LocalChatTransportError("invalid_request_payload")
+    if "response_format" in payload:
+        try:
+            tool_loop_format_state(payload["response_format"])
+        except (ValueError, TypeError, RecursionError):
+            raise LocalChatTransportError("invalid_request_payload") from None
     messages = payload["messages"]
     if type(messages) is not list or not 1 <= len(messages) <= 33:
         raise LocalChatTransportError("invalid_request_payload")
@@ -203,6 +212,11 @@ class _ChunkedDecoder:
         self._check()
         return result
 
+    @property
+    def complete(self) -> bool:
+        """Framing is complete, but acceptance still requires peer EOF."""
+        return self._state == "complete"
+
 
 class LocalChatHttpTransport:
     """Bounded synchronous socket I/O with cooperative cancellation every <=50ms.
@@ -210,12 +224,15 @@ class LocalChatHttpTransport:
     Construction is inert. The configured endpoint is never taken from model
     output or request data. No authentication is supported by this first slice.
     A custom clock is a trusted deterministic seam, not evidence of live timing.
+    Phase diagnostics are opt-in and reset their origin per call. Body framing
+    completion is not response acceptance: peer EOF remains mandatory.
     """
 
     def __init__(
         self, *, endpoint: str, max_request_bytes: int = 524_288,
         max_response_bytes: int = 1_048_576, max_header_bytes: int = 16_384,
         clock: Callable[[], float] = monotonic,
+        phase_observer: Callable[[dict[str, object]], None] | None = None,
     ) -> None:
         self._host, self._port, self._family, self._authority = _endpoint(endpoint)
         for value, bound in ((max_request_bytes, 524_288), (max_response_bytes, 2_097_152),
@@ -224,12 +241,16 @@ class LocalChatHttpTransport:
                 raise ValueError("invalid_local_chat_limit")
         if not callable(clock):
             raise ValueError("invalid_local_chat_clock")
+        if phase_observer is not None and not callable(phase_observer):
+            raise ValueError("invalid_local_chat_phase_observer")
         self._max_request = max_request_bytes
         self._max_response = max_response_bytes
         self._max_headers = max_header_bytes
         self._clock = clock
+        self._phase_observer = phase_observer
         self._initial = (self._host, self._port, self._family, self._authority,
-                         max_request_bytes, max_response_bytes, max_header_bytes, clock)
+                         max_request_bytes, max_response_bytes, max_header_bytes, clock,
+                         phase_observer)
 
     def _fence(self, snapshot):
         current = (self._host, self._port, self._family, self._authority,
@@ -237,7 +258,7 @@ class LocalChatHttpTransport:
         if (self._initial is not snapshot
                 or any(type(value) is not type(expected) or value != expected
                        for value, expected in zip(current, snapshot[:7], strict=True))
-                or self._clock is not snapshot[7]):
+                or self._clock is not snapshot[7] or self._phase_observer is not snapshot[8]):
             raise LocalChatTransportError("configuration_changed")
 
     def __call__(self, payload: dict[str, object], *, timeout_seconds: float,
@@ -251,7 +272,7 @@ class LocalChatHttpTransport:
             snapshot = self._initial
             self._fence(snapshot)
             (host, port, family, authority, request_limit, response_limit,
-             header_limit, clock) = snapshot
+             header_limit, clock, phase_observer) = snapshot
             start = clock()
             if not _number(start):
                 raise LocalChatTransportError("invalid_clock")
@@ -275,6 +296,14 @@ class LocalChatHttpTransport:
                 if now >= deadline:
                     raise LocalChatTransportError("timeout")
                 return deadline - now
+
+            def observe(phase: str) -> None:
+                if phase_observer is None:
+                    return
+                remaining = check()
+                emit_phase(phase_observer, phase,
+                           elapsed_seconds=timeout_seconds - remaining, clock=clock)
+                check()
 
             check()
             body = _request_bytes(payload, request_limit)
@@ -308,6 +337,7 @@ class LocalChatHttpTransport:
             wait(write=True)
             if connection.getsockopt(socket.SOL_SOCKET, socket.SO_ERROR):
                 raise LocalChatTransportError("transport_error")
+            observe("connect_complete")
             outgoing = memoryview(headers + body)
             while outgoing:
                 wait(write=True)
@@ -318,10 +348,13 @@ class LocalChatHttpTransport:
                 if sent <= 0:
                     raise LocalChatTransportError("transport_error")
                 outgoing = outgoing[sent:]
+            observe("request_sent")
             buffered = bytearray()
             length = None
             framing_ready = False
             decoder = None
+            first_byte_reported = False
+            body_complete_reported = False
             while True:
                 wait()
                 try:
@@ -330,6 +363,7 @@ class LocalChatHttpTransport:
                     continue
                 check()
                 if not chunk:
+                    observe("peer_closed")
                     if decoder is not None:
                         result = decoder.finish()
                         check()
@@ -339,6 +373,9 @@ class LocalChatHttpTransport:
                         check()
                         return result
                     raise LocalChatTransportError("response_interrupted")
+                if not first_byte_reported:
+                    first_byte_reported = True
+                    observe("first_byte")
                 if not framing_ready:
                     buffered.extend(chunk)
                     boundary = buffered.find(b"\r\n\r\n")
@@ -349,6 +386,7 @@ class LocalChatHttpTransport:
                     if boundary + 4 > header_limit:
                         raise LocalChatTransportError("response_limit_exceeded")
                     length = self._parse_headers(bytes(buffered[:boundary]), response_limit)
+                    observe("headers_validated")
                     chunk = bytes(buffered[boundary + 4:])
                     buffered.clear()
                     framing_ready = True
@@ -356,10 +394,16 @@ class LocalChatHttpTransport:
                         decoder = _ChunkedDecoder(response_limit, check=check)
                 if decoder is not None:
                     decoder.feed(chunk)
+                    if decoder.complete and not body_complete_reported:
+                        body_complete_reported = True
+                        observe("body_complete")
                     continue
                 buffered.extend(chunk)
                 if len(buffered) > length:
                     raise LocalChatTransportError("invalid_http_response")
+                if len(buffered) == length and not body_complete_reported:
+                    body_complete_reported = True
+                    observe("body_complete")
                 # Require peer close after the exact declared body; late extra
                 # bytes cannot become a second ambiguous response or JSON tail.
         except LocalChatTransportError:

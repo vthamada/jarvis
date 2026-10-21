@@ -1,5 +1,13 @@
 # Campanha pública de missões do harness
 
+Atualizacao2026-10-18: adapter canonico agora isola brief de binding/fontes pela
+seam reviewed existente (bundle integral512/brief2048). Nao resolve envelope do
+grader, briefs ambiguos ou campanha util. Nova prova separada de conversa com
+gpt-6.1-sol renovou sessao expirada da mesma conta e parou na primeira inferencia
+HTTP200/Content-Typeausente, sem resposta aceita/retry. Runbooks:
+mission-routing-reviewed-sources.md e canonical-history-conversation-pilot-2026-10-18.md.
+Resultados anteriores abaixo sao historicos, nao reexecutados apos esta mudanca.
+
 Data: 2026-10-17. Protocolo opt-in implementado, baseline nativa executada e
 um único piloto autorizado com conta real interrompido na sessão expirada.
 Não houve resposta de modelo concluída nem comparação de qualidade válida.

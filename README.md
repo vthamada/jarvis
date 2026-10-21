@@ -1,5 +1,18 @@
 # JARVIS
 
+Experimento atual: [replay de contexto Hermes e comparação com memória](docs/operations/hermes-context-comparison-2026-10-20.md).
+Opt-in, sem substituir o Core. Gate aprovado; piloto real parcial, sem memória
+comprovada ou vantagem demonstrada. Resultados e próximos recortes no runbook.
+
+Direção ativa de composição tecnológica, explicitada em 2026-10-20:
+[visão canônica](documento_mestre_jarvis.md#31-composição-tecnológica-orientada-a-resultados--direção-2026-10-20),
+[estratégia e critérios de evidência](docs/architecture/technology-absorption-order.md)
+e [próximo recorte na fila única](docs/implementation/execution-backlog.md).
+Reuso efetivo de código é candidato preferencial quando reduzir custo total;
+nenhuma integração ou superioridade é declarada apenas por essa diretriz.
+As notas de baseline abaixo preservam o histórico; para maturidade atual, ver
+o [inventário de produto](docs/operations/product-readiness-report.md).
+
 Leitura atual pos-`MB-152`:
 
 - o baseline funcional avancou ate o ciclo governado `usar -> registrar ->
